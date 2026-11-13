@@ -26,6 +26,10 @@ import {
   Sparkles,
   Download,
   ShieldAlert,
+  Menu,
+  X,
+  ChevronRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
@@ -47,7 +51,9 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { storeSettings, updateStoreSettings } = useCart();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'fraud' | 'settings'>('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [newBlacklistPhone, setNewBlacklistPhone] = useState('');
 
   // Authentication Guard
   useEffect(() => {
@@ -287,111 +293,272 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      {/* Top Admin Header */}
-      <header className="bg-gray-900 text-white border-b border-gray-800 sticky top-0 z-30 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
-              title="ওয়েবসাইটে ফিরে যান"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-emerald-500 text-gray-950 font-black flex items-center justify-center text-sm">
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row font-sans">
+      {/* Mobile Top Header */}
+      <div className="lg:hidden bg-gray-900 text-white p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 z-40">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            className="p-1.5 rounded-lg bg-gray-800 text-gray-300 hover:text-white"
+            aria-label="Toggle admin sidebar"
+          >
+            {isMobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-emerald-500 text-gray-950 font-black flex items-center justify-center text-xs">
+              SB
+            </span>
+            <span className="font-bold text-sm truncate">{storeSettings.storeName}</span>
+          </div>
+        </div>
+        <Link
+          href="/"
+          target="_blank"
+          className="p-1.5 rounded-lg bg-gray-800 text-gray-300 hover:text-white text-xs flex items-center gap-1"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          <span>সাইট</span>
+        </Link>
+      </div>
+
+      {/* Mobile Backdrop Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden backdrop-blur-2xs"
+        />
+      )}
+
+      {/* ================= LEFT SIDEBAR PANEL ================= */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800 text-white flex flex-col justify-between transition-transform duration-300 lg:static lg:translate-x-0 ${
+          isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
+        <div>
+          {/* Brand Header */}
+          <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-gray-950 font-black flex items-center justify-center text-sm shadow-md">
                 SB
               </span>
-              <div>
-                <h1 className="font-bold text-sm sm:text-base leading-tight">
-                  {storeSettings.storeName} অ্যাডমিন হাব
-                </h1>
-                <p className="text-[10px] text-emerald-400">মাস্টার কন্ট্রোল প্যানেল</p>
+              <div className="overflow-hidden">
+                <h1 className="font-extrabold text-sm truncate">{storeSettings.storeName}</h1>
+                <p className="text-[10px] text-emerald-400 font-medium tracking-wide uppercase">অ্যাডমিন হাব</p>
               </div>
             </div>
+            <button
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="p-1 rounded-lg text-gray-400 hover:text-white lg:hidden"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="p-3 space-y-1">
+            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              ম্যানেজমেন্ট মেনু
+            </div>
+
+            <button
+              onClick={() => {
+                setActiveTab('overview');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                <span>ড্যাশবোর্ড ও রিপোর্ট</span>
+              </div>
+              <ChevronRight
+                className={`w-3.5 h-3.5 transition-transform ${
+                  activeTab === 'overview' ? 'rotate-90' : 'text-gray-500'
+                }`}
+              />
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('orders');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'orders'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                <span>অর্ডার ও কুরিয়ার</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {totalPending > 0 && (
+                  <span className="bg-amber-500 text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                    {totalPending}
+                  </span>
+                )}
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'orders' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('products');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'products'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Package className="w-4 h-4 text-emerald-400" />
+                <span>পণ্য ও স্টক</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-semibold">{products.length}</span>
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'products' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('fraud');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'fraud'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-rose-400" />
+                <span>ফ্রড প্রিভেনশন শিল্ড</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {flaggedPhones.length > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                    {flaggedPhones.length}
+                  </span>
+                )}
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'fraud' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('settings');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'settings'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Settings className="w-4 h-4 text-emerald-400" />
+                <span>স্টোর ও হোয়াটসঅ্যাপ সেটিংস</span>
+              </div>
+              <ChevronRight
+                className={`w-3.5 h-3.5 transition-transform ${
+                  activeTab === 'settings' ? 'rotate-90' : 'text-gray-500'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-gray-800 space-y-2">
+          <Link
+            href="/"
+            target="_blank"
+            className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+              <span>লাইভ সাইট ভিজিট</span>
+            </div>
+            <span className="text-[10px] text-gray-400">নতুন ট্যাব ↗</span>
+          </Link>
+
+          <div className="p-3 rounded-xl bg-gray-800/60 border border-gray-800 flex items-center justify-between">
+            <div className="overflow-hidden">
+              <p className="text-[11px] font-bold text-gray-200 truncate">admin@smartbazar.com</p>
+              <p className="text-[9px] text-emerald-400">সুপার অ্যাডমিন</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-500 rounded-lg transition-colors"
+              title="সাইন আউট"
+              aria-label="সাইন আউট"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ================= MAIN CONTENT AREA ================= */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+        {/* Desktop Top Header Bar */}
+        <header className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-gray-200">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-400">অ্যাডমিন</span>
+            <span className="text-gray-300">/</span>
+            <span className="font-bold text-gray-900">
+              {activeTab === 'overview' && 'ড্যাশবোর্ড ও রিপোর্ট'}
+              {activeTab === 'orders' && 'অর্ডার ও কুরিয়ার পাইপলাইন'}
+              {activeTab === 'products' && 'পণ্য ও স্টক ইনভেন্টরি'}
+              {activeTab === 'fraud' && 'ফ্রড প্রিভেনশন ও ব্ল্যাকলিস্ট হাব'}
+              {activeTab === 'settings' && 'স্টোর ও হোয়াটসঅ্যাপ কনফিগারেশন'}
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
               href="/"
               target="_blank"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-gray-200 hover:text-white hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>লাইভ সাইট</span>
+              <span>লাইভ স্টোর দেখুন</span>
             </Link>
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all"
-              title="লগআউট করুন"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-rose-50 hover:text-rose-600 text-gray-600 transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">লগআউট</span>
+              <span>লগআউট</span>
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Navigation Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-2 overflow-x-auto py-2 border-t border-gray-800">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
-              activeTab === 'overview'
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>ড্যাশবোর্ড ও রিপোর্ট</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
-              activeTab === 'orders'
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>অর্ডার ও কুরিয়ার ({orders.length})</span>
-            {totalPending > 0 && (
-              <span className="bg-amber-500 text-gray-950 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
-                {totalPending}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
-              activeTab === 'products'
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>পণ্য ও স্টক ({products.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
-              activeTab === 'settings'
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>স্টোর ও হোয়াটসঅ্যাপ সেটিংস</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        {/* Content Body */}
+        <main className="p-4 sm:p-6 lg:p-8 flex-1 w-full max-w-7xl mx-auto">
         {/* ================= TAB 1: OVERVIEW & REPORTS ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
@@ -1014,7 +1181,110 @@ export default function AdminPage() {
             </form>
           </div>
         )}
+
+        {/* ================= TAB 4: FRAUD PREVENTION & BLACKLIST ================= */}
+        {activeTab === 'fraud' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-xs">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-rose-600" />
+                    <span>ফ্রড প্রিভেনশন ও কাস্টমার ব্ল্যাকলিস্ট হাব</span>
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    সন্দেহজনক কাস্টমার ও পার্সেল রিটার্ন করা ফোন নম্বর পরিচালনা করুন। যেকোনো ব্ল্যাকলিস্টেড নম্বর থেকে অর্ডার আসলে স্বয়ংক্রিয় লাল সতর্কবার্তা দেখাবে।
+                  </p>
+                </div>
+
+                <span className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold w-fit shrink-0">
+                  মোট ফ্ল্যাগড নম্বর: {flaggedPhones.length} টি
+                </span>
+              </div>
+
+              {/* Manual Phone Blacklist Input */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const clean = newBlacklistPhone.trim();
+                  if (!clean) return;
+                  if (!flaggedPhones.includes(clean)) {
+                    toggleFlaggedPhone(clean);
+                  }
+                  setNewBlacklistPhone('');
+                }}
+                className="flex gap-2 max-w-md mb-6"
+              >
+                <input
+                  type="text"
+                  value={newBlacklistPhone}
+                  onChange={(e) => setNewBlacklistPhone(e.target.value)}
+                  placeholder="নতুন মোবাইল নম্বর লিখুন (যেমন: 01700000000)..."
+                  className="flex-1 px-3.5 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+                >
+                  ব্ল্যাকলিস্ট করুন
+                </button>
+              </form>
+
+              {/* Flagged Phones Table */}
+              {flaggedPhones.length === 0 ? (
+                <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
+                  <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-gray-700">বর্তমানে কোনো ফোন নম্বর ফ্রড তালিকায় নেই</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">সব কাস্টমার নিরাপদ বিবেচিত হচ্ছে</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 text-gray-600 uppercase font-semibold">
+                      <tr>
+                        <th className="p-3">ব্ল্যাকলিস্টেড মোবাইল নম্বর</th>
+                        <th className="p-3">অর্ডার হিস্ট্রি</th>
+                        <th className="p-3">ঝুঁকির ধরন</th>
+                        <th className="p-3 text-right">একশন</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {flaggedPhones.map((ph) => {
+                        const customerOrders = orders.filter((o) => o.customerPhone === ph);
+                        const cancelledCount = customerOrders.filter(
+                          (o) => o.status === 'cancelled' || o.status === 'returned'
+                        ).length;
+                        return (
+                          <tr key={ph} className="hover:bg-gray-50/50">
+                            <td className="p-3 font-bold text-rose-700 font-mono text-sm">{ph}</td>
+                            <td className="p-3 text-gray-600">
+                              মোট অর্ডার: <span className="font-bold">{customerOrders.length}</span> (বাতিল/রিটার্ন: <span className="text-rose-600 font-bold">{cancelledCount}</span>)
+                            </td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold">
+                                🚨 সন্দেহজনক / পার্সেল রিটার্ন ঝুঁকি
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => toggleFlaggedPhone(ph)}
+                                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition-colors"
+                              >
+                                তালিকা থেকে আনব্লক করুন
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
+    </div>
 
       {/* ================= MODAL: ADD NEW PRODUCT ================= */}
       {isAddProductOpen && (
