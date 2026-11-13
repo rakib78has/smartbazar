@@ -241,9 +241,15 @@ export default function AdminPage() {
     } catch {}
   };
 
-  const handleUpdateCourier = (orderId: string, trackingCode: string) => {
+  const handleUpdateCourier = (orderId: string, trackingCode: string, courierName?: string) => {
     const updated = orders.map((o) =>
-      o.id === orderId ? { ...o, courierTrackingCode: trackingCode } : o
+      o.id === orderId
+        ? {
+            ...o,
+            courierTrackingCode: trackingCode,
+            courierName: courierName !== undefined ? courierName : o.courierName,
+          }
+        : o
     );
     setOrders(updated);
     try {
@@ -667,13 +673,35 @@ export default function AdminPage() {
                             </select>
                           </td>
                           <td className="p-3.5">
-                            <input
-                              type="text"
-                              defaultValue={ord.courierTrackingCode || ''}
-                              onBlur={(e) => handleUpdateCourier(ord.id, e.target.value)}
-                              placeholder="ট্র্যাকিং আইডি দিন..."
-                              className="text-xs px-2 py-1 border border-gray-200 rounded-lg w-32 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                            />
+                            <div className="flex flex-col gap-1.5">
+                              <select
+                                value={ord.courierName || 'steadfast'}
+                                onChange={(e) =>
+                                  handleUpdateCourier(
+                                    ord.id,
+                                    ord.courierTrackingCode || '',
+                                    e.target.value
+                                  )
+                                }
+                                className="text-[10px] font-semibold py-1 px-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 w-32"
+                              >
+                                <option value="steadfast">Steadfast (স্টেডফাস্ট)</option>
+                                <option value="pathao">Pathao (পাঠাও)</option>
+                                <option value="redx">RedX (রেডএক্স)</option>
+                                <option value="paperfly">Paperfly (পেপারফ্লাই)</option>
+                                <option value="sundarban">Sundarban (সুন্দরবন)</option>
+                                <option value="other">অন্যান্য কুরিয়ার</option>
+                              </select>
+                              <input
+                                type="text"
+                                defaultValue={ord.courierTrackingCode || ''}
+                                onBlur={(e) =>
+                                  handleUpdateCourier(ord.id, e.target.value, ord.courierName)
+                                }
+                                placeholder="ট্র্যাকিং আইডি দিন..."
+                                className="text-xs px-2 py-1 border border-gray-200 rounded-lg w-32 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </div>
                           </td>
                           <td className="p-3.5 text-right space-x-1.5">
                             <button

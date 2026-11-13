@@ -1,16 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Heart, Star, ShoppingBag, Eye } from 'lucide-react';
+import { Heart, Star, ShoppingBag, Eye, Zap } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 
 interface ProductCardProps {
   product: Product;
   onOpenDetails: (product: Product) => void;
+  onQuickBuy?: (product: Product) => void;
 }
 
-export function ProductCard({ product, onOpenDetails }: ProductCardProps) {
+export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardProps) {
   const { wishlist, toggleWishlist, addToCart } = useCart();
   const isWishlisted = wishlist.includes(product.id);
 
@@ -31,6 +32,15 @@ export function ProductCard({ product, onOpenDetails }: ProductCardProps) {
       image: product.images[0],
       maxStock: product.variants[0]?.stock ?? product.stock,
     });
+  };
+
+  const handleDirectOrder = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onQuickBuy) {
+      onQuickBuy(product);
+    } else {
+      onOpenDetails(product);
+    }
   };
 
   return (
@@ -123,14 +133,24 @@ export function ProductCard({ product, onOpenDetails }: ProductCardProps) {
               </div>
             </div>
 
-            <button
-              onClick={handleQuickAdd}
-              className="p-2 sm:px-3 sm:py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-xs"
-              title="কার্টে যোগ করুন"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">কিনুন</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleQuickAdd}
+                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all shadow-2xs"
+                title="কার্টে যোগ করুন"
+              >
+                <ShoppingBag className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleDirectOrder}
+                className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-xs"
+                title="সরাসরি হোয়াটসঅ্যাপে অর্ডার করুন"
+              >
+                <Zap className="w-3.5 h-3.5 fill-white" />
+                <span>অর্ডার করুন</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

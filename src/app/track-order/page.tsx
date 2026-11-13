@@ -13,12 +13,31 @@ import {
   ArrowLeft,
   MessageCircle,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Order, OrderStatus } from '@/types/order';
 import { fetchOrders } from '@/lib/db';
 import { useCart } from '@/context/CartContext';
+
+function getCourierTrackingUrl(courierName?: string, trackingCode?: string): string {
+  if (!trackingCode) return '';
+  switch (courierName?.toLowerCase()) {
+    case 'steadfast':
+      return `https://steadfast.com.bd/t/${trackingCode}`;
+    case 'pathao':
+      return `https://merchant.pathao.com/tracking?consignment_id=${trackingCode}`;
+    case 'redx':
+      return `https://redx.com.bd/track-order/?trackingId=${trackingCode}`;
+    case 'paperfly':
+      return `https://paperfly.com.bd/tracking/${trackingCode}`;
+    case 'sundarban':
+      return `https://sundarbancourier.com.bd/`;
+    default:
+      return `https://steadfast.com.bd/t/${trackingCode}`;
+  }
+}
 
 const STATUS_STEPS: { key: OrderStatus; label: string; desc: string }[] = [
   { key: 'pending', label: 'অর্ডার প্রাপ্তি', desc: 'অর্ডার রিকোয়েস্ট জমা হয়েছে' },
@@ -54,6 +73,7 @@ export default function TrackOrderPage() {
   const [searched, setSearched] = useState(false);
   const [matchingOrders, setMatchingOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,17 +200,28 @@ export default function TrackOrderPage() {
                         </p>
                       </div>
 
-                      <a
-                        href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}?text=${encodeURIComponent(
-                          `হ্যালো! আমি আমার অর্ডার #${order.orderNumber} সম্পর্কে জানতে চাই।`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors w-fit"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>হোয়াটসঅ্যাপে যোগাযোগ</span>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedInvoiceOrder(order)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors"
+                          title="অর্ডারের ক্যাশ মেমো ডাউনলোড বা প্রিন্ট করুন"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>ক্যাশ মেমো</span>
+                        </button>
+
+                        <a
+                          href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}?text=${encodeURIComponent(
+                            `হ্যালো! আমি আমার অর্ডার #${order.orderNumber} সম্পর্কে জানতে চাই।`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors w-fit"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>হোয়াটসঅ্যাপে যোগাযোগ</span>
+                        </a>
+                      </div>
                     </div>
 
                     {/* Visual Stepper Timeline */}
@@ -259,19 +290,29 @@ export default function TrackOrderPage() {
 
                     {/* Courier Tracking Banner (if available) */}
                     {order.courierTrackingCode && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
+                      <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2.5">
                           <Truck className="w-5 h-5 text-blue-600 shrink-0" />
                           <div>
                             <span className="font-semibold text-gray-700">কুরিয়ার ট্র্যাকিং কোড: </span>
                             <span className="font-bold text-blue-900">{order.courierTrackingCode}</span>
                             {order.courierName && (
-                              <span className="text-[10px] text-gray-500 block">
+                              <span className="text-[10px] text-gray-500 block uppercase font-bold mt-0.5">
                                 কুরিয়ার সার্ভিস: {order.courierName}
                               </span>
                             )}
                           </div>
                         </div>
+
+                        <a
+                          href={getCourierTrackingUrl(order.courierName, order.courierTrackingCode)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 w-fit"
+                        >
+                          <span>কুরিয়ার ওয়েবসাইটে ট্র্যাক করুন</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                       </div>
                     )}
 
@@ -311,6 +352,89 @@ export default function TrackOrderPage() {
           </div>
         )}
       </main>
+
+      {/* ================= MODAL: PRINT CASH MEMO / INVOICE ================= */}
+      {selectedInvoiceOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-gray-100 text-xs">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-4">
+              <div>
+                <h3 className="font-bold text-base text-gray-900">{storeSettings.storeName}</h3>
+                <p className="text-[10px] text-gray-500">ক্যাশ মেমো ও ডেলিভারি চালান</p>
+              </div>
+              <button
+                onClick={() => setSelectedInvoiceOrder(null)}
+                className="text-gray-400 hover:text-gray-700 text-sm font-bold p-1 rounded-lg hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="flex justify-between">
+                <span className="text-gray-500">অর্ডার নম্বর:</span>
+                <span className="font-bold text-gray-800">{selectedInvoiceOrder.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">কাস্টমার নাম:</span>
+                <span className="font-semibold text-gray-800">{selectedInvoiceOrder.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">মোবাইল:</span>
+                <span className="font-semibold text-gray-800">{selectedInvoiceOrder.customerPhone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">ঠিকানা:</span>
+                <span className="font-medium text-gray-800 text-right max-w-[200px]">
+                  {selectedInvoiceOrder.deliveryAddress}
+                </span>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
+              <table className="w-full text-left">
+                <thead className="bg-gray-100 text-[10px] text-gray-600 font-bold uppercase">
+                  <tr>
+                    <th className="p-2">আইটেম</th>
+                    <th className="p-2 text-center">পরিমাণ</th>
+                    <th className="p-2 text-right">মূল্য</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedInvoiceOrder.items.map((i, idx) => (
+                    <tr key={idx}>
+                      <td className="p-2">
+                        {i.productName} {i.variantName ? `(${i.variantName})` : ''}
+                      </td>
+                      <td className="p-2 text-center">{i.quantity}</td>
+                      <td className="p-2 text-right font-bold">৳{i.price * i.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-1 text-right mb-6 text-gray-600">
+              <div>সাবটোটাল: ৳{selectedInvoiceOrder.subtotal}</div>
+              <div>ডেলিভারি চার্জ: ৳{selectedInvoiceOrder.deliveryCharge}</div>
+              {selectedInvoiceOrder.discount > 0 && (
+                <div className="text-emerald-700">ডিসকাউন্ট: -৳{selectedInvoiceOrder.discount}</div>
+              )}
+              <div className="font-black text-gray-900 text-sm pt-1 border-t border-gray-200">
+                মোট প্রদেয় (ক্যাশ অন ডেলিভারি): ৳{selectedInvoiceOrder.total}
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.print()}
+              className="w-full py-2.5 bg-gray-900 hover:bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>প্রিন্ট বা PDF সেভ করুন</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

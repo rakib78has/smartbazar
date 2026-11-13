@@ -8,6 +8,10 @@ import { ProductCard } from '@/components/ProductCard';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { SocialProofPopup } from '@/components/SocialProofPopup';
 import { SpinWheelModal } from '@/components/SpinWheelModal';
+import { FlashSaleCountdown } from '@/components/FlashSaleCountdown';
+import { RecentlyViewed, recordProductView } from '@/components/RecentlyViewed';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { WhatsAppCheckoutModal } from '@/components/WhatsAppCheckoutModal';
 import { initialProducts, initialCategories } from '@/lib/mock-data';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
@@ -21,6 +25,7 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [quickBuyProduct, setQuickBuyProduct] = useState<Product | null>(null);
   const [isSpinModalOpen, setIsSpinModalOpen] = useState<boolean>(false);
 
   // Filter products by search and category
@@ -84,7 +89,10 @@ export default function HomePage() {
       </section>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full pb-24 md:pb-12">
+        {/* Flash Sale Urgency Banner */}
+        <FlashSaleCountdown />
+
         {/* Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none">
           <button
@@ -149,11 +157,26 @@ export default function HomePage() {
               <ProductCard
                 key={product.id}
                 product={product}
-                onOpenDetails={(p) => setActiveModalProduct(p)}
+                onOpenDetails={(p) => {
+                  recordProductView(p.id);
+                  setActiveModalProduct(p);
+                }}
+                onQuickBuy={(p) => {
+                  recordProductView(p.id);
+                  setQuickBuyProduct(p);
+                }}
               />
             ))}
           </div>
         )}
+
+        {/* Recently Viewed Products */}
+        <RecentlyViewed
+          onOpenDetails={(p) => {
+            recordProductView(p.id);
+            setActiveModalProduct(p);
+          }}
+        />
       </main>
 
       {/* Floating WhatsApp Contact Button */}
@@ -260,6 +283,29 @@ export default function HomePage() {
         isOpen={isSpinModalOpen}
         onClose={() => setIsSpinModalOpen(false)}
       />
+
+      {/* 1-Click Quick Order Modal */}
+      <WhatsAppCheckoutModal
+        isOpen={!!quickBuyProduct}
+        onClose={() => setQuickBuyProduct(null)}
+        singleItem={
+          quickBuyProduct
+            ? {
+                productId: quickBuyProduct.id,
+                variantId: quickBuyProduct.variants[0]?.id,
+                productName: quickBuyProduct.name,
+                variantName: quickBuyProduct.variants[0]?.name,
+                price: quickBuyProduct.discountPrice || quickBuyProduct.basePrice,
+                quantity: 1,
+                image: quickBuyProduct.images[0],
+                maxStock: quickBuyProduct.variants[0]?.stock ?? quickBuyProduct.stock,
+              }
+            : null
+        }
+      />
+
+      {/* Sticky Mobile App-Like Navigation */}
+      <MobileBottomNav onOpenSpinWheel={() => setIsSpinModalOpen(true)} />
     </div>
   );
 }
