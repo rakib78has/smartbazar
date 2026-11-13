@@ -22,6 +22,7 @@ import {
   Printer,
   Save,
   LogOut,
+  Upload,
 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
@@ -29,6 +30,14 @@ import { StoreSettings } from '@/types/store';
 import { initialProducts, initialOrders, initialStoreSettings, initialCategories } from '@/lib/mock-data';
 import { useCart } from '@/context/CartContext';
 import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
+import {
+  fetchProducts,
+  saveProductToDb,
+  deleteProductFromDb,
+  fetchOrders,
+  updateOrderStatusInDb,
+  uploadImageFile,
+} from '@/lib/db';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -64,29 +73,26 @@ export default function AdminPage() {
   const [newProdStock, setNewProdStock] = useState('20');
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdImage, setNewProdImage] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Invoice modal
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
 
-  // Load products & orders from localStorage or seed
+  // Load products & orders from DB (Supabase or fallback)
   useEffect(() => {
-    try {
-      const savedProds = localStorage.getItem('smartbazar_admin_products');
-      if (savedProds) {
-        setProducts(JSON.parse(savedProds));
-      } else {
-        setProducts(initialProducts);
-        localStorage.setItem('smartbazar_admin_products', JSON.stringify(initialProducts));
-      }
+    fetchProducts().then((data) => {
+      setProducts(data);
+      try {
+        localStorage.setItem('smartbazar_admin_products', JSON.stringify(data));
+      } catch {}
+    });
 
-      const savedOrders = localStorage.getItem('smartbazar_orders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      } else {
-        setOrders(initialOrders);
-        localStorage.setItem('smartbazar_orders', JSON.stringify(initialOrders));
-      }
-    } catch {}
+    fetchOrders().then((data) => {
+      setOrders(data);
+      try {
+        localStorage.setItem('smartbazar_orders', JSON.stringify(data));
+      } catch {}
+    });
   }, []);
 
   // Sync settings when context changes
@@ -94,8 +100,29 @@ export default function AdminPage() {
     setSettingsForm(storeSettings);
   }, [storeSettings]);
 
+  // Handle direct image file upload
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    const uploadedUrl = await uploadImageFile(file);
+    if (uploadedUrl) {
+      setNewProdImage(uploadedUrl);
+      setIsUploadingImage(false);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewProdImage(reader.result as string);
+      setIsUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Save product helper
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdName || !newProdPrice) return;
 
@@ -124,6 +151,7 @@ export default function AdminPage() {
 
     const updated = [newProduct, ...products];
     setProducts(updated);
+    await saveProductToDb(newProduct);
     try {
       localStorage.setItem('smartbazar_admin_products', JSON.stringify(updated));
     } catch {}
@@ -137,18 +165,20 @@ export default function AdminPage() {
     setNewProdImage('');
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (!confirm('আপনি কি নিশ্চিত এই পণ্যটি ডিলিট করতে চান?')) return;
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
+    await deleteProductFromDb(id);
     try {
       localStorage.setItem('smartbazar_admin_products', JSON.stringify(updated));
     } catch {}
   };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     const updated = orders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o));
     setOrders(updated);
+    await updateOrderStatusInDb(orderId, newStatus);
     try {
       localStorage.setItem('smartbazar_orders', JSON.stringify(updated));
     } catch {}
@@ -890,7 +920,38 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 mb-1">ছবির URL</label>
+                <label className="block font-bold text-gray-700 mb-1">পণ্যের ছবি</label>
+                
+                {/* File picker */}
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl cursor-pointer transition-colors text-xs font-semibold">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingImage ? 'আপলোড হচ্ছে...' : 'ডিভাইস থেকে ছবি আপলোড করুন'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="hidden"
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                  <span className="text-[10px] text-gray-400">অথবা নিচে URL দিন</span>
+                </div>
+
+                {/* Image Preview */}
+                {newProdImage && (
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 mb-2">
+                    <img src={newProdImage} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setNewProdImage('')}
+                      className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 <input
                   type="url"
                   value={newProdImage}

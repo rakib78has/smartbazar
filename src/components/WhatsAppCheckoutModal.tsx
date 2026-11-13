@@ -6,6 +6,7 @@ import { useCart, CartItem } from '@/context/CartContext';
 import { orderFormSchema } from '@/lib/validation';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
 import { Order } from '@/types/order';
+import { saveOrderToDb } from '@/lib/db';
 
 interface WhatsAppCheckoutModalProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export function WhatsAppCheckoutModal({
       notes,
     });
 
-    // 2. Save Order to localStorage (for Admin Panel pipeline)
+    // 2. Save Order to DB (Supabase & localStorage for Admin Panel pipeline)
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       orderNumber,
@@ -113,6 +114,7 @@ export function WhatsAppCheckoutModal({
       updatedAt: new Date().toISOString(),
     };
 
+    saveOrderToDb(newOrder);
     try {
       const existingOrders: Order[] = JSON.parse(
         localStorage.getItem('smartbazar_orders') || '[]'
