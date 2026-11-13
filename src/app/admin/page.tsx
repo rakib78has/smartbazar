@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Package,
@@ -20,16 +21,29 @@ import {
   ArrowLeft,
   Printer,
   Save,
+  LogOut,
 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
 import { StoreSettings } from '@/types/store';
 import { initialProducts, initialOrders, initialStoreSettings, initialCategories } from '@/lib/mock-data';
 import { useCart } from '@/context/CartContext';
+import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { storeSettings, updateStoreSettings } = useCart();
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'settings'>('overview');
+
+  // Authentication Guard
+  useEffect(() => {
+    if (!isUserAuthenticated()) {
+      router.replace('/admin/login');
+    } else {
+      setIsAuthChecking(false);
+    }
+  }, [router]);
 
   // State for products & orders
   const [products, setProducts] = useState<Product[]>([]);
@@ -156,6 +170,11 @@ export default function AdminPage() {
     alert('স্টোর সেটিংস সফলভাবে আপডেট করা হয়েছে!');
   };
 
+  const handleLogout = () => {
+    logoutAdmin();
+    router.replace('/admin/login');
+  };
+
   // Analytics Metrics
   const totalRevenue = orders
     .filter((o) => o.status !== 'cancelled' && o.status !== 'returned')
@@ -164,6 +183,15 @@ export default function AdminPage() {
   const totalDelivered = orders.filter((o) => o.status === 'delivered').length;
   const totalPending = orders.filter((o) => o.status === 'pending').length;
   const totalShipped = orders.filter((o) => o.status === 'shipped').length;
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs text-gray-400 font-mono">নিরাপত্তা যাচাই করা হচ্ছে...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
@@ -198,8 +226,17 @@ export default function AdminPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-gray-200 hover:text-white hover:bg-gray-700 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>লাইভ সাইট দেখুন</span>
+              <span>লাইভ সাইট</span>
             </Link>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all"
+              title="লগআউট করুন"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">লগআউট</span>
+            </button>
           </div>
         </div>
 
