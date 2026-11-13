@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { CartDrawer } from '@/components/CartDrawer';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
+import { SocialProofPopup } from '@/components/SocialProofPopup';
 import { initialProducts, initialCategories } from '@/lib/mock-data';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
@@ -232,6 +233,9 @@ export default function HomePage() {
         isOpen={!!activeModalProduct}
         onClose={() => setActiveModalProduct(null)}
       />
+
+      {/* Live Sales Social Proof Popup */}
+      <SocialProofPopup onOpenProduct={(p) => setActiveModalProduct(p)} />
     </div>
   );
 }

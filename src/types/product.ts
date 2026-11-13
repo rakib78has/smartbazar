@@ -42,3 +42,13 @@ export interface Category {
   image?: string;
   productCount?: number;
 }
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  customerName: string;
+  rating: number; // 1 to 5
+  comment: string;
+  isApproved: boolean;
+  createdAt: string;
+}
