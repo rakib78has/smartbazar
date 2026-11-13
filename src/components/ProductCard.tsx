@@ -46,13 +46,16 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
   return (
     <div
       onClick={() => onOpenDetails(product)}
-      className="group bg-white rounded-2xl border border-gray-100 hover:border-emerald-200 overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer relative"
+      className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-emerald-200 dark:hover:border-emerald-700 overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer relative"
     >
       {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
+      <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-gray-800">
         <img
-          src={product.images[0]}
+          src={product.images[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'}
           alt={product.name}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
+          }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
@@ -115,13 +118,13 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
           </div>
 
           {/* Product Name */}
-          <h3 className="font-semibold text-xs sm:text-sm text-gray-800 line-clamp-2 group-hover:text-emerald-700 transition-colors mb-2">
+          <h3 className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-100 line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors mb-2">
             {product.name}
           </h3>
 
           {/* Variant Notice */}
           {product.variants.length > 0 && (
-            <p className="text-[11px] text-gray-500 mb-3">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
               {product.variants.length} টি সাইজ / কালার অপশন
             </p>
           )}
@@ -129,10 +132,10 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
 
         <div>
           {/* Price & Action */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+          <div className="flex items-center justify-between pt-2 border-t border-gray-50 dark:border-gray-800">
             <div className="flex flex-col">
               <div className="flex items-baseline gap-1.5">
-                <span className="font-black text-sm sm:text-base text-gray-900">৳{price}</span>
+                <span className="font-black text-sm sm:text-base text-gray-900 dark:text-white">৳{price}</span>
                 {product.discountPrice && (
                   <span className="text-[11px] text-gray-400 line-through">
                     ৳{product.basePrice}
@@ -144,7 +147,7 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleQuickAdd}
-                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all shadow-2xs"
+                className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-2xs"
                 title="কার্টে যোগ করুন"
               >
                 <ShoppingBag className="w-4 h-4" />

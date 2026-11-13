@@ -47,16 +47,16 @@ export function CartDrawer() {
     <>
       <div className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
         <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-          <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+          <div className="w-screen max-w-md bg-white dark:bg-gray-900 shadow-2xl flex flex-col text-gray-900 dark:text-gray-100">
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-emerald-600" />
-                <h2 className="font-bold text-lg text-gray-900">শপিং ব্যাগ ({cart.length})</h2>
+                <h2 className="font-bold text-lg text-gray-900 dark:text-white">শপিং ব্যাগ ({cart.length})</h2>
               </div>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

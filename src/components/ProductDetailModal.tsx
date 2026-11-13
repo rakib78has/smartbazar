@@ -130,10 +130,10 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-        <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 relative">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 text-gray-500 hover:text-gray-900 bg-white/80 hover:bg-white rounded-full shadow-xs transition-colors"
+            className="absolute top-4 right-4 z-10 p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-xs transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { CartDrawer } from '@/components/CartDrawer';
@@ -14,6 +14,7 @@ import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { WhatsAppCheckoutModal } from '@/components/WhatsAppCheckoutModal';
 import { WhatsAppChatWidget } from '@/components/WhatsAppChatWidget';
 import { initialProducts, initialCategories } from '@/lib/mock-data';
+import { fetchProducts } from '@/lib/db';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -22,7 +23,15 @@ import { PhoneCall, ShieldCheck, Truck, RefreshCw, Sparkles, MessageCircle } fro
 export default function HomePage() {
   const { storeSettings } = useCart();
   const { t, language } = useLanguage();
-  const [products] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+
+  useEffect(() => {
+    fetchProducts().then((data) => {
+      if (data && data.length > 0) {
+        setProducts(data);
+      }
+    });
+  }, []);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
@@ -54,7 +63,7 @@ export default function HomePage() {
   }, [products, selectedCategory, searchQuery, sortBy]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col font-sans">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 dark:text-gray-100 flex flex-col font-sans transition-colors">
       <Navbar onSearch={(q) => setSearchQuery(q)} />
       <CartDrawer />
 
@@ -112,7 +121,7 @@ export default function HomePage() {
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold shrink-0 transition-all ${
               selectedCategory === 'all'
                 ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
             }`}
           >
             {t('allProducts')} ({products.length})
@@ -125,7 +134,7 @@ export default function HomePage() {
               className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold shrink-0 transition-all ${
                 selectedCategory === cat.slug
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
               }`}
             >
               {cat.name}

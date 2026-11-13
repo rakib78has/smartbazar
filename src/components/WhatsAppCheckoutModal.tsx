@@ -71,10 +71,13 @@ export function WhatsAppCheckoutModal({
     e.preventDefault();
     setErrors({});
 
+    // Sanitize phone number (strip spaces, dashes, parentheses)
+    const sanitizedPhone = phone.replace(/[\s\-\(\)]/g, '');
+
     // Validate using Zod schema
     const validation = orderFormSchema.safeParse({
       customerName: name,
-      customerPhone: phone,
+      customerPhone: sanitizedPhone,
       deliveryAddress: address,
       deliveryZone,
       notes,
@@ -106,7 +109,7 @@ export function WhatsAppCheckoutModal({
     const whatsappUrl = generateWhatsAppOrderUrl(storeSettings.primaryWhatsAppNumber, {
       orderNumber,
       customerName: name,
-      customerPhone: phone,
+      customerPhone: sanitizedPhone,
       deliveryAddress: address,
       deliveryZoneText: zoneText,
       items: activeItems,
@@ -122,7 +125,7 @@ export function WhatsAppCheckoutModal({
       id: `ord-${Date.now()}`,
       orderNumber,
       customerName: name,
-      customerPhone: phone,
+      customerPhone: sanitizedPhone,
       deliveryAddress: address,
       deliveryZone,
       notes,
@@ -182,7 +185,7 @@ export function WhatsAppCheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 sm:p-8 relative">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100 p-6 sm:p-8 relative">
         <button
           onClick={handleClose}
           className="absolute top-5 right-5 p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"

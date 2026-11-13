@@ -85,10 +85,11 @@ export default function TrackOrderPage() {
 
     try {
       const allOrders = await fetchOrders();
+      const digitsOnly = trimmed.replace(/\D/g, '');
       const filtered = allOrders.filter(
         (o) =>
           o.orderNumber.toLowerCase().includes(trimmed.toLowerCase()) ||
-          o.customerPhone.replace(/\D/g, '').includes(trimmed.replace(/\D/g, ''))
+          (digitsOnly.length >= 6 && o.customerPhone.replace(/\D/g, '').includes(digitsOnly))
       );
       setMatchingOrders(filtered);
     } catch {
