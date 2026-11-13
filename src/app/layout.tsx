@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartContext';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { InstallPwaBanner } from '@/components/InstallPwaBanner';
 
 const geistSans = Geist({
@@ -44,11 +46,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="bn" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-white text-gray-900">
-        <CartProvider>
-          {children}
-          <InstallPwaBanner />
-        </CartProvider>
+      <body className="min-h-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
+        <ThemeProvider>
+          <LanguageProvider>
+            <CartProvider>
+              {children}
+              <InstallPwaBanner />
+            </CartProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

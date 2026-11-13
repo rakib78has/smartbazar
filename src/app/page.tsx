@@ -7,17 +7,21 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { SocialProofPopup } from '@/components/SocialProofPopup';
+import { SpinWheelModal } from '@/components/SpinWheelModal';
 import { initialProducts, initialCategories } from '@/lib/mock-data';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { PhoneCall, ShieldCheck, Truck, RefreshCw, Sparkles, MessageCircle } from 'lucide-react';
 
 export default function HomePage() {
   const { storeSettings } = useCart();
+  const { t, language } = useLanguage();
   const [products] = useState<Product[]>(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [isSpinModalOpen, setIsSpinModalOpen] = useState<boolean>(false);
 
   // Filter products by search and category
   const filteredProducts = useMemo(() => {
@@ -45,30 +49,34 @@ export default function HomePage() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold mb-4 backdrop-blur-xs">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>১০০% ক্যাশ অন ডেলিভারি এবং সহজ রিটার্ন</span>
+              <span>{t('heroTag')}</span>
             </div>
             
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-4">
-              সেরা মানের পণ্য, সরাসরি <span className="text-emerald-400">হোয়াটসঅ্যাপে</span> অর্ডার করুন!
+              {language === 'bn' ? (
+                <>সেরা মানের পণ্য, সরাসরি <span className="text-emerald-400">হোয়াটসঅ্যাপে</span> অর্ডার করুন!</>
+              ) : (
+                <>Premium Products, Order Directly on <span className="text-emerald-400">WhatsApp!</span></>
+              )}
             </h1>
             
             <p className="text-sm sm:text-base text-gray-300 mb-8 leading-relaxed">
-              পছন্দের সাইজ ও কালার বেছে নিন, কোনো জটিল রেজিস্ট্রেশন বা পেমেন্ট গেটওয়ের ঝামেলা ছাড়াই এক ক্লিকে অর্ডার কনফার্ম করুন।
+              {t('heroSubtitle')}
             </p>
 
             {/* Quick Highlights */}
             <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
                 <Truck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>সারা দেশে হোম ডেলিভারি</span>
+                <span>{t('freeDelivery')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>দেখে শুনে মূল্য পরিশোধ</span>
+                <span>{t('inspectBeforePay')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>৭ দিনের রিপ্লেসমেন্ট</span>
+                <span>{t('easyReturn')}</span>
               </div>
             </div>
           </div>
@@ -87,7 +95,7 @@ export default function HomePage() {
                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            সব পণ্য ({products.length})
+            {t('allProducts')} ({products.length})
           </button>
 
           {initialCategories.map((cat) => (
@@ -236,6 +244,22 @@ export default function HomePage() {
 
       {/* Live Sales Social Proof Popup */}
       <SocialProofPopup onOpenProduct={(p) => setActiveModalProduct(p)} />
+
+      {/* Floating Spin Wheel Trigger */}
+      <button
+        onClick={() => setIsSpinModalOpen(true)}
+        className="fixed bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-emerald-600 text-white font-extrabold text-xs shadow-xl hover:scale-105 active:scale-95 transition-transform group cursor-pointer"
+        title="ভাগ্যের চাকা ঘুরিয়ে ডিসকাউন্ট কুপন জিতুন"
+      >
+        <span className="text-base group-hover:rotate-45 transition-transform">🎁</span>
+        <span>ভাগ্যের চাকা</span>
+      </button>
+
+      {/* Spin Wheel Modal */}
+      <SpinWheelModal
+        isOpen={isSpinModalOpen}
+        onClose={() => setIsSpinModalOpen(false)}
+      />
     </div>
   );
 }

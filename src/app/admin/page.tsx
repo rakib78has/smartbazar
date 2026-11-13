@@ -24,6 +24,8 @@ import {
   LogOut,
   Upload,
   Sparkles,
+  Download,
+  ShieldAlert,
 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
@@ -31,6 +33,7 @@ import { StoreSettings } from '@/types/store';
 import { initialProducts, initialOrders, initialStoreSettings, initialCategories } from '@/lib/mock-data';
 import { useCart } from '@/context/CartContext';
 import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
+import { exportOrdersToCSV } from '@/lib/export';
 import {
   fetchProducts,
   saveProductToDb,
@@ -61,6 +64,35 @@ export default function AdminPage() {
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
+
+  // Fraud prevention / Risky customer flagged phone numbers
+  const [flaggedPhones, setFlaggedPhones] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('smartbazar_flagged_phones');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const toggleFlaggedPhone = (phone: string) => {
+    setFlaggedPhones((prev) => {
+      const next = prev.includes(phone) ? prev.filter((p) => p !== phone) : [...prev, phone];
+      try {
+        localStorage.setItem('smartbazar_flagged_phones', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const isCustomerRisky = (phone: string) => {
+    if (flaggedPhones.includes(phone)) return true;
+    const customerOrders = orders.filter((o) => o.customerPhone === phone);
+    return customerOrders.some((o) => o.status === 'cancelled' || o.status === 'returned');
+  };
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<StoreSettings>(storeSettings);
@@ -408,17 +440,27 @@ export default function AdminPage() {
 
             {/* Recent Orders Preview */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm">সাম্প্রতিক অর্ডারসমূহ</h3>
                   <p className="text-xs text-gray-500">সর্বশেষ প্রাপ্ত অর্ডারগুলোর তালিকা</p>
                 </div>
-                <button
-                  onClick={() => setActiveTab('orders')}
-                  className="text-xs font-bold text-emerald-600 hover:underline"
-                >
-                  সব অর্ডার দেখুন →
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportOrdersToCSV(orders)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors"
+                    title="সব অর্ডার এক্সেল/CSV ফাইলে ডাউনলোড করুন"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>এক্সেল রিপোর্ট</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="text-xs font-bold text-emerald-600 hover:underline"
+                  >
+                    সব অর্ডার দেখুন →
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -434,12 +476,20 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {orders.slice(0, 5).map((ord) => (
+                    {orders.slice(0, 5).map((ord) => {
+                      const isRisky = isCustomerRisky(ord.customerPhone);
+                      return (
                       <tr key={ord.id} className="hover:bg-gray-50/50">
                         <td className="p-3.5 font-bold text-gray-900">{ord.orderNumber}</td>
                         <td className="p-3.5">
                           <div className="font-semibold text-gray-800">{ord.customerName}</div>
                           <div className="text-[11px] text-gray-500">{ord.customerPhone}</div>
+                          {isRisky && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <ShieldAlert className="w-2.5 h-2.5 text-rose-600" />
+                              ঝুঁকিপূর্ণ
+                            </span>
+                          )}
                         </td>
                         <td className="p-3.5 text-gray-600">
                           {ord.items.map((i) => `${i.productName} (x${i.quantity})`).join(', ')}
@@ -472,7 +522,8 @@ export default function AdminPage() {
                           </a>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>
@@ -496,23 +547,44 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* Status Filter */}
-              <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto">
-                {['all', 'pending', 'confirmed', 'packaging', 'shipped', 'delivered', 'cancelled'].map(
-                  (st) => (
-                    <button
-                      key={st}
-                      onClick={() => setOrderStatusFilter(st)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize shrink-0 transition-colors ${
-                        orderStatusFilter === st
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  )
-                )}
+              {/* Status Filter & Export */}
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="flex gap-1.5 overflow-x-auto">
+                  {['all', 'pending', 'confirmed', 'packaging', 'shipped', 'delivered', 'cancelled'].map(
+                    (st) => (
+                      <button
+                        key={st}
+                        onClick={() => setOrderStatusFilter(st)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize shrink-0 transition-colors ${
+                          orderStatusFilter === st
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    const filtered = orders.filter((o) => {
+                      const matchesFilter = orderStatusFilter === 'all' || o.status === orderStatusFilter;
+                      const matchesQuery =
+                        o.orderNumber.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                        o.customerName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                        o.customerPhone.includes(orderSearch);
+                      return matchesFilter && matchesQuery;
+                    });
+                    exportOrdersToCSV(filtered);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs transition-colors shrink-0"
+                  title="ফিল্টার করা সব অর্ডার Excel/CSV ফাইলে ডাউনলোড করুন"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>এক্সেল এক্সপোর্ট</span>
+                </button>
               </div>
             </div>
 
@@ -556,6 +628,12 @@ export default function AdminPage() {
                             <div className="text-[11px] text-gray-500 max-w-[200px] truncate" title={ord.deliveryAddress}>
                               {ord.deliveryAddress}
                             </div>
+                            {isCustomerRisky(ord.customerPhone) && (
+                              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-1 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
+                                <span>ঝুঁকিপূর্ণ কাস্টমার</span>
+                              </div>
+                            )}
                           </td>
                           <td className="p-3.5">
                             {ord.items.map((i, idx) => (
@@ -597,10 +675,25 @@ export default function AdminPage() {
                               className="text-xs px-2 py-1 border border-gray-200 rounded-lg w-32 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                             />
                           </td>
-                          <td className="p-3.5 text-right space-x-2">
+                          <td className="p-3.5 text-right space-x-1.5">
+                            <button
+                              onClick={() => toggleFlaggedPhone(ord.customerPhone)}
+                              className={`p-1.5 rounded-lg transition-colors inline-block ${
+                                flaggedPhones.includes(ord.customerPhone)
+                                  ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 ring-1 ring-rose-300'
+                                  : 'text-gray-400 hover:text-rose-600 hover:bg-gray-100'
+                              }`}
+                              title={
+                                flaggedPhones.includes(ord.customerPhone)
+                                  ? 'ফ্রড তালিকা থেকে বাদ দিন'
+                                  : 'সন্দেহজনক / ফ্রড কাস্টমার চিহ্নিত করুন'
+                              }
+                            >
+                              <ShieldAlert className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => setSelectedOrderForInvoice(ord)}
-                              className="p-1.5 text-gray-500 hover:text-emerald-600 rounded-lg hover:bg-gray-100 transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-emerald-600 rounded-lg hover:bg-gray-100 transition-colors inline-block"
                               title="ক্যাশ মেমো প্রিন্ট করুন"
                             >
                               <Printer className="w-4 h-4" />

@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck } from 'lucide-react';
+import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck, Moon, Sun, Globe } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { useTheme } from '@/context/ThemeContext';
 
 interface NavbarProps {
   onSearch?: (query: string) => void;
@@ -11,6 +13,8 @@ interface NavbarProps {
 
 export function Navbar({ onSearch }: NavbarProps) {
   const { totalItems, wishlist, storeSettings, setIsCartOpen } = useCart();
+  const { language, toggleLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -21,10 +25,10 @@ export function Navbar({ onSearch }: NavbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-xs transition-colors">
       {/* Top Announcement Bar */}
       {storeSettings.announcementActive && (
-        <div className="bg-emerald-600 text-white text-xs sm:text-sm py-1.5 px-4 text-center font-medium tracking-wide">
+        <div className="bg-emerald-600 dark:bg-emerald-700 text-white text-xs sm:text-sm py-1.5 px-4 text-center font-medium tracking-wide">
           <span>{storeSettings.announcementText}</span>
         </div>
       )}
@@ -36,7 +40,7 @@ export function Navbar({ onSearch }: NavbarProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 -ml-2 text-gray-700 hover:text-emerald-600 sm:hidden"
+              className="p-2 -ml-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 sm:hidden"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -47,10 +51,10 @@ export function Navbar({ onSearch }: NavbarProps) {
                 SB
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-xl sm:text-2xl text-gray-900 tracking-tight group-hover:text-emerald-700 transition-colors">
+                <span className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                   {storeSettings.storeName}
                 </span>
-                <span className="text-[10px] text-gray-500 hidden sm:block">
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 hidden sm:block">
                   {storeSettings.storeTagline}
                 </span>
               </div>
@@ -65,21 +69,45 @@ export function Navbar({ onSearch }: NavbarProps) {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="পণ্য সার্চ করুন (যেমন: টি-শার্ট, ওয়াচ)..."
-                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                placeholder={t('searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-full focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
               />
             </div>
           </div>
 
           {/* Actions & Buttons */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Language Switcher [BN/EN] */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors"
+              title={t('langToggle')}
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{language === 'bn' ? 'বাং' : 'EN'}</span>
+            </button>
+
+            {/* Dark/Light Mode Switcher */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:text-amber-500 dark:hover:text-amber-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={t('themeToggle')}
+              aria-label={t('themeToggle')}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+
             {/* Track Order Link */}
             <Link
               href="/track-order"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
-              <Truck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>ট্র্যাক অর্ডার</span>
+              <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{t('trackOrder')}</span>
             </Link>
 
             {/* WhatsApp Contact Button */}
@@ -87,17 +115,17 @@ export function Navbar({ onSearch }: NavbarProps) {
               href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
             >
               <PhoneCall className="w-3.5 h-3.5" />
-              <span>সহায়তা</span>
+              <span>{t('help')}</span>
             </a>
 
             {/* Wishlist Button */}
             <div className="relative">
               <button
-                className="p-2 text-gray-700 hover:text-emerald-600 rounded-full hover:bg-gray-100 transition-colors"
-                title="পছন্দের তালিকা"
+                className="p-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title={t('wishlist')}
               >
                 <Heart className="w-5 h-5 sm:w-6 sm:h-6" />
                 {wishlist.length > 0 && (
@@ -114,7 +142,7 @@ export function Navbar({ onSearch }: NavbarProps) {
               className="relative flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium shadow-sm hover:shadow transition-all group"
             >
               <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span className="text-xs sm:text-sm font-semibold hidden sm:inline">কার্ট</span>
+              <span className="text-xs sm:text-sm font-semibold hidden sm:inline">{t('cart')}</span>
               {totalItems > 0 && (
                 <span className="w-5 h-5 bg-white text-emerald-700 font-extrabold text-xs rounded-full flex items-center justify-center shadow-xs">
                   {totalItems}
@@ -125,8 +153,8 @@ export function Navbar({ onSearch }: NavbarProps) {
             {/* Admin Panel Link */}
             <Link
               href="/admin"
-              className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
-              title="অ্যাডমিন প্যানেল"
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={t('adminPanel')}
             >
               <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </Link>
@@ -141,8 +169,8 @@ export function Navbar({ onSearch }: NavbarProps) {
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              placeholder="পণ্য সার্চ করুন..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder={t('searchPlaceholder')}
+              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
