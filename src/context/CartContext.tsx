@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { OrderItem } from '@/types/order';
 import { initialStoreSettings } from '@/lib/mock-data';
 import { StoreSettings } from '@/types/store';
+import { Coupon, initialCoupons } from '@/types/coupon';
 
 export interface CartItem extends OrderItem {
   maxStock: number;
@@ -20,6 +21,10 @@ interface CartContextType {
   deliveryZone: 'inside_dhaka' | 'outside_dhaka';
   setDeliveryZone: (zone: 'inside_dhaka' | 'outside_dhaka') => void;
   deliveryCharge: number;
+  appliedCoupon: Coupon | null;
+  couponDiscount: number;
+  applyCoupon: (code: string) => { success: boolean; message: string };
+  removeCoupon: () => void;
   total: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
@@ -43,6 +48,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [quickBuyItem, setQuickBuyItem] = useState<CartItem | null>(null);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(initialStoreSettings);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
 
   // Load cart & wishlist from localStorage on mount
   useEffect(() => {
@@ -138,7 +145,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       ? storeSettings.deliveryChargeInsideDhaka
       : storeSettings.deliveryChargeOutsideDhaka;
 
-  const total = subtotal + deliveryCharge;
+  // Coupon calculation
+  let couponDiscount = 0;
+  if (appliedCoupon && subtotal >= appliedCoupon.minOrderAmount) {
+    if (appliedCoupon.discountType === 'fixed') {
+      couponDiscount = appliedCoupon.discountValue;
+    } else {
+      couponDiscount = Math.round((subtotal * appliedCoupon.discountValue) / 100);
+    }
+  }
+
+  const applyCoupon = (code: string): { success: boolean; message: string } => {
+    const cleanCode = code.trim().toUpperCase();
+    const found = coupons.find((c) => c.code.toUpperCase() === cleanCode && c.isActive);
+
+    if (!found) {
+      return { success: false, message: 'অকার্যকর কুপন কোড!' };
+    }
+    if (subtotal < found.minOrderAmount) {
+      return {
+        success: false,
+        message: `এই কুপনটি পেতে কমপক্ষে ৳${found.minOrderAmount} টাকার অর্ডার করতে হবে।`,
+      };
+    }
+    setAppliedCoupon(found);
+    return { success: true, message: `অভিনন্দন! কুপন প্রয়োগ করা হয়েছে।` };
+  };
+
+  const removeCoupon = () => setAppliedCoupon(null);
+
+  const total = Math.max(0, subtotal + deliveryCharge - couponDiscount);
 
   return (
     <CartContext.Provider
@@ -153,6 +189,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         deliveryZone,
         setDeliveryZone,
         deliveryCharge,
+        appliedCoupon,
+        couponDiscount,
+        applyCoupon,
+        removeCoupon,
         total,
         isCartOpen,
         setIsCartOpen,

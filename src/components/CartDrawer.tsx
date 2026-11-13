@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Check, AlertCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { WhatsAppCheckoutModal } from './WhatsAppCheckoutModal';
 
@@ -16,11 +16,24 @@ export function CartDrawer() {
     deliveryZone,
     setDeliveryZone,
     deliveryCharge,
+    appliedCoupon,
+    couponDiscount,
+    applyCoupon,
+    removeCoupon,
     total,
     storeSettings,
   } = useCart();
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponMsg, setCouponMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponInput.trim()) return;
+    const res = applyCoupon(couponInput);
+    setCouponMsg({ text: res.message, isError: !res.success });
+  };
 
   if (!isCartOpen) return null;
 
@@ -180,6 +193,50 @@ export function CartDrawer() {
                   </div>
                 </div>
 
+                {/* Coupon Code Section */}
+                <div className="pt-2 border-t border-gray-200">
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between p-2.5 bg-emerald-100/70 border border-emerald-300 rounded-xl text-xs text-emerald-800">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>কুপন '{appliedCoupon.code}': -৳{couponDiscount}</span>
+                      </div>
+                      <button
+                        onClick={removeCoupon}
+                        className="text-[11px] font-semibold text-rose-600 hover:underline"
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value)}
+                        placeholder="কুপন কোড (যেমন: SAVE50)..."
+                        className="flex-1 px-3 py-1.5 text-xs uppercase bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors"
+                      >
+                        প্রয়োগ
+                      </button>
+                    </form>
+                  )}
+                  {couponMsg && !appliedCoupon && (
+                    <p
+                      className={`text-[11px] mt-1 flex items-center gap-1 ${
+                        couponMsg.isError ? 'text-rose-500' : 'text-emerald-600'
+                      }`}
+                    >
+                      <AlertCircle className="w-3 h-3" />
+                      {couponMsg.text}
+                    </p>
+                  )}
+                </div>
+
                 <div className="space-y-1.5 text-xs pt-2 border-t border-gray-200">
                   <div className="flex justify-between text-gray-600">
                     <span>সাবটোটাল</span>
@@ -189,6 +246,12 @@ export function CartDrawer() {
                     <span>ডেলিভারি চার্জ</span>
                     <span>{deliveryCharge === 0 ? 'ফ্রি' : `৳${deliveryCharge}`}</span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-700 font-bold">
+                      <span>কুপন ডিসকাউন্ট</span>
+                      <span>-৳{couponDiscount}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-extrabold text-gray-900 pt-1 border-t border-gray-200">
                     <span>সর্বমোট</span>
                     <span className="text-emerald-700">৳{total}</span>

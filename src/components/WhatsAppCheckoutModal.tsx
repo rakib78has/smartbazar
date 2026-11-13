@@ -19,8 +19,18 @@ export function WhatsAppCheckoutModal({
   onClose,
   singleItem,
 }: WhatsAppCheckoutModalProps) {
-  const { cart, subtotal, deliveryZone, setDeliveryZone, deliveryCharge, total, storeSettings, clearCart } =
-    useCart();
+  const {
+    cart,
+    subtotal,
+    deliveryZone,
+    setDeliveryZone,
+    deliveryCharge,
+    appliedCoupon,
+    couponDiscount,
+    total,
+    storeSettings,
+    clearCart,
+  } = useCart();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -42,7 +52,8 @@ export function WhatsAppCheckoutModal({
       : deliveryZone === 'inside_dhaka'
       ? storeSettings.deliveryChargeInsideDhaka
       : storeSettings.deliveryChargeOutsideDhaka;
-  const activeTotal = activeSubtotal + activeDeliveryCharge;
+  const activeDiscount = singleItem ? 0 : couponDiscount;
+  const activeTotal = Math.max(0, activeSubtotal + activeDeliveryCharge - activeDiscount);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +100,7 @@ export function WhatsAppCheckoutModal({
       items: activeItems,
       subtotal: activeSubtotal,
       deliveryCharge: activeDeliveryCharge,
-      discount: 0,
+      discount: activeDiscount,
       total: activeTotal,
       notes,
     });
@@ -106,7 +117,7 @@ export function WhatsAppCheckoutModal({
       items: activeItems,
       subtotal: activeSubtotal,
       deliveryCharge: activeDeliveryCharge,
-      discount: 0,
+      discount: activeDiscount,
       total: activeTotal,
       status: 'pending',
       channel: 'whatsapp',
@@ -206,6 +217,12 @@ export function WhatsAppCheckoutModal({
                   <span>ডেলিভারি চার্জ</span>
                   <span>{activeDeliveryCharge === 0 ? 'ফ্রি' : `৳${activeDeliveryCharge}`}</span>
                 </div>
+                {activeDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>কুপন ডিসকাউন্ট</span>
+                    <span>-৳{activeDiscount}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200">
                   <span>সর্বমোট প্রদেয়</span>
                   <span className="text-emerald-700">৳{activeTotal}</span>
