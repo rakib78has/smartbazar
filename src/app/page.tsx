@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { CartDrawer } from '@/components/CartDrawer';
 import { ProductCard } from '@/components/ProductCard';
@@ -194,9 +195,14 @@ export default function HomePage() {
 
             <div>
               <h3 className="font-bold text-xs uppercase tracking-wider text-gray-900 mb-3">
-                সহায়তা ও নিরাপত্তা
+                সহায়তা ও সেবা
               </h3>
               <ul className="space-y-2 text-xs text-gray-600">
+                <li>
+                  <Link href="/track-order" className="text-emerald-700 font-bold hover:underline flex items-center gap-1">
+                    <span>📦 অর্ডার ট্র্যাক করুন</span>
+                  </Link>
+                </li>
                 <li>৭ দিনের মধ্যে পণ্য রিটার্ন সুবিধা</li>
                 <li>১০০% জেনুইন পণ্যের নিশ্চয়তা</li>
                 <li>হোম ডেলিভারিতে পার্সেল চেক করে গ্রহণের সুযোগ</li>

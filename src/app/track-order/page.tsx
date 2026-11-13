@@ -1,0 +1,316 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  Search,
+  Package,
+  CheckCircle2,
+  Clock,
+  Truck,
+  Box,
+  AlertCircle,
+  ArrowLeft,
+  MessageCircle,
+  ExternalLink,
+} from 'lucide-react';
+import { Navbar } from '@/components/Navbar';
+import { CartDrawer } from '@/components/CartDrawer';
+import { Order, OrderStatus } from '@/types/order';
+import { fetchOrders } from '@/lib/db';
+import { useCart } from '@/context/CartContext';
+
+const STATUS_STEPS: { key: OrderStatus; label: string; desc: string }[] = [
+  { key: 'pending', label: 'অর্ডার প্রাপ্তি', desc: 'অর্ডার রিকোয়েস্ট জমা হয়েছে' },
+  { key: 'confirmed', label: 'কনফার্মেশন', desc: 'হোয়াটসঅ্যাপে অর্ডার যাচাই সম্পন্ন' },
+  { key: 'packaging', label: 'প্যাকিং চলছে', desc: 'পণ্যটি পার্সেল করা হচ্ছে' },
+  { key: 'shipped', label: 'কুরিয়ারে হস্তান্তর', desc: 'পার্সেলটি আপনার ঠিকানায় পাঠানো হয়েছে' },
+  { key: 'delivered', label: 'ডেলিভার্ড সফল', desc: 'কাস্টমার পার্সেল গ্রহণ করেছে' },
+];
+
+function getStepIndex(status: OrderStatus): number {
+  switch (status) {
+    case 'pending':
+      return 0;
+    case 'confirmed':
+      return 1;
+    case 'packaging':
+      return 2;
+    case 'shipped':
+      return 3;
+    case 'delivered':
+      return 4;
+    case 'cancelled':
+    case 'returned':
+      return -1;
+    default:
+      return 0;
+  }
+}
+
+export default function TrackOrderPage() {
+  const { storeSettings } = useCart();
+  const [query, setQuery] = useState('');
+  const [searched, setSearched] = useState(false);
+  const [matchingOrders, setMatchingOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setIsLoading(true);
+    setSearched(true);
+
+    try {
+      const allOrders = await fetchOrders();
+      const filtered = allOrders.filter(
+        (o) =>
+          o.orderNumber.toLowerCase().includes(trimmed.toLowerCase()) ||
+          o.customerPhone.replace(/\D/g, '').includes(trimmed.replace(/\D/g, ''))
+      );
+      setMatchingOrders(filtered);
+    } catch {
+      setMatchingOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      <Navbar />
+      <CartDrawer />
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16 flex-1 w-full">
+        {/* Top Header */}
+        <div className="text-center max-w-xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-3">
+            <Truck className="w-4 h-4 text-emerald-600" />
+            <span>লাইভ পার্সেল ট্র্যাকিং</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight mb-2">
+            আপনার অর্ডার ট্র্যাক করুন
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            অর্ডার নম্বর (যেমন: ORD-1001) অথবা যে মোবাইল নম্বর দিয়ে অর্ডার করেছেন তা লিখে সার্চ করুন।
+          </p>
+
+          {/* Search Box */}
+          <form onSubmit={handleSearch} className="mt-6 flex gap-2 max-w-md mx-auto">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                required
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="অর্ডার নম্বর বা মোবাইল নম্বর..."
+                className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm bg-white border border-gray-200 rounded-2xl shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="py-3 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md transition-all active:scale-[0.99] disabled:opacity-50"
+            >
+              {isLoading ? 'খোঁজা হচ্ছে...' : 'ট্র্যাক করুন'}
+            </button>
+          </form>
+        </div>
+
+        {/* Results Area */}
+        {searched && (
+          <div className="space-y-6">
+            {matchingOrders.length === 0 ? (
+              <div className="bg-white rounded-3xl p-10 text-center border border-gray-100 shadow-xs max-w-md mx-auto">
+                <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-sm mb-1">কোনো অর্ডার পাওয়া যায়নি</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  অনুগ্রহ করে সঠিক অর্ডার কোড বা ১১ ডিজিটের মোবাইল নম্বরটি চেক করুন।
+                </p>
+                <a
+                  href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}?text=${encodeURIComponent(
+                    `হ্যালো! আমি আমার অর্ডার ট্র্যাক করতে পারছি না। নম্বর: ${query}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>হোয়াটসঅ্যাপে সহায়তা নিন</span>
+                </a>
+              </div>
+            ) : (
+              matchingOrders.map((order) => {
+                const currentStepIndex = getStepIndex(order.status);
+                const isCancelled = order.status === 'cancelled' || order.status === 'returned';
+
+                return (
+                  <div
+                    key={order.id}
+                    className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-md"
+                  >
+                    {/* Header info */}
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center pb-6 border-b border-gray-100 gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-lg text-gray-900">
+                            #{order.orderNumber}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
+                              order.status === 'delivered'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : order.status === 'shipped'
+                                ? 'bg-blue-100 text-blue-800'
+                                : isCancelled
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {order.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          অর্ডারের তারিখ: {new Date(order.createdAt).toLocaleDateString('bn-BD')}
+                        </p>
+                      </div>
+
+                      <a
+                        href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}?text=${encodeURIComponent(
+                          `হ্যালো! আমি আমার অর্ডার #${order.orderNumber} সম্পর্কে জানতে চাই।`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors w-fit"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>হোয়াটসঅ্যাপে যোগাযোগ</span>
+                      </a>
+                    </div>
+
+                    {/* Visual Stepper Timeline */}
+                    <div className="py-8">
+                      {isCancelled ? (
+                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold text-center">
+                          এই অর্ডারটি বাতিল বা ফেরত করা হয়েছে। বিস্তারিত জানতে সাপোর্টে কথা বলুন।
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          {/* Progress Line */}
+                          <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-gray-100 z-0">
+                            <div
+                              className="h-1 bg-emerald-600 transition-all duration-500"
+                              style={{
+                                width: `${(currentStepIndex / (STATUS_STEPS.length - 1)) * 100}%`,
+                              }}
+                            />
+                          </div>
+
+                          {/* Steps Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative z-10">
+                            {STATUS_STEPS.map((step, idx) => {
+                              const isCompleted = idx <= currentStepIndex;
+                              const isCurrent = idx === currentStepIndex;
+
+                              return (
+                                <div
+                                  key={step.key}
+                                  className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2"
+                                >
+                                  <div
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                      isCurrent
+                                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-md scale-110'
+                                        : isCompleted
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-gray-100 text-gray-400'
+                                    }`}
+                                  >
+                                    {isCompleted ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      idx + 1
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div
+                                      className={`text-xs font-bold ${
+                                        isCompleted ? 'text-gray-900' : 'text-gray-400'
+                                      }`}
+                                    >
+                                      {step.label}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 sm:max-w-[120px] mx-auto hidden sm:block">
+                                      {step.desc}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Courier Tracking Banner (if available) */}
+                    {order.courierTrackingCode && (
+                      <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-5 h-5 text-blue-600 shrink-0" />
+                          <div>
+                            <span className="font-semibold text-gray-700">কুরিয়ার ট্র্যাকিং কোড: </span>
+                            <span className="font-bold text-blue-900">{order.courierTrackingCode}</span>
+                            {order.courierName && (
+                              <span className="text-[10px] text-gray-500 block">
+                                কুরিয়ার সার্ভিস: {order.courierName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Order Details & Items */}
+                    <div className="border-t border-gray-100 pt-5">
+                      <div className="text-xs font-bold text-gray-700 mb-3">অর্ডারকৃত পণ্যসমূহ:</div>
+                      <div className="space-y-2 mb-4">
+                        {order.items.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between items-center text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl"
+                          >
+                            <span className="font-medium">
+                              • {item.productName} {item.variantName ? `(${item.variantName})` : ''} x{' '}
+                              <span className="font-bold">{item.quantity}</span>
+                            </span>
+                            <span className="font-bold text-gray-900">
+                              ৳{item.price * item.quantity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs text-gray-600 pt-2 border-t border-gray-100">
+                        <span>
+                          ডেলিভারি ঠিকানা: <span className="font-semibold text-gray-800">{order.deliveryAddress}</span>
+                        </span>
+                        <span className="font-black text-sm text-emerald-700">
+                          সর্বমোট: ৳{order.total} (ক্যাশ অন ডেলিভারি)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

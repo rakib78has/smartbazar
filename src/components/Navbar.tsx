@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X } from 'lucide-react';
+import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 interface NavbarProps {
@@ -73,6 +73,15 @@ export function Navbar({ onSearch }: NavbarProps) {
 
           {/* Actions & Buttons */}
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Track Order Link */}
+            <Link
+              href="/track-order"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+            >
+              <Truck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>ট্র্যাক অর্ডার</span>
+            </Link>
+
             {/* WhatsApp Contact Button */}
             <a
               href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}`}
