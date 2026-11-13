@@ -163,22 +163,38 @@ export function WhatsAppCheckoutModal({
         </button>
 
         {isSuccess ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              অর্ডার হোয়াটসঅ্যাপে পাঠানো হয়েছে!
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              🎉 অর্ডার হোয়াটসঅ্যাপে পাঠানো হয়েছে!
             </h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-xs sm:text-sm text-gray-600 mb-6">
               হোয়াটসঅ্যাপে মেসেজটি সেন্ড করুন। আমাদের প্রতিনিধি অতি দ্রুত আপনার অর্ডারটি কনফার্ম করবে।
             </p>
-            <button
-              onClick={handleClose}
-              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition-colors"
-            >
-              ঠিক আছে
-            </button>
+
+            <div className="space-y-2.5">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `আমি ${storeSettings.storeName} থেকে আকর্ষণীয় অফারে পণ্য অর্ডার করেছি! আপনিও দেখুন: ${
+                    typeof window !== 'undefined' ? window.location.origin : ''
+                  }`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl border border-emerald-200 text-xs flex items-center justify-center gap-2 transition-colors"
+              >
+                <span>🎁 বন্ধুদের সাথে অফারটি শেয়ার করুন</span>
+              </a>
+
+              <button
+                onClick={handleClose}
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition-colors text-xs"
+              >
+                ঠিক আছে, ধন্যবাদ
+              </button>
+            </div>
           </div>
         ) : (
           <div>

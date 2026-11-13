@@ -61,3 +61,42 @@ export function exportOrdersToCSV(orders: Order[], fileName = 'smartbazar-orders
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * Exports orders in the exact format required by Steadfast Courier
+ * for 1-click bulk consignment upload on the Steadfast merchant portal.
+ */
+export function exportSteadfastCSV(orders: Order[], fileName = 'steadfast-bulk-orders'): void {
+  if (typeof window === 'undefined' || orders.length === 0) return;
+
+  const headers = [
+    'Invoice',
+    'Recipient Name',
+    'Recipient Phone',
+    'Recipient Address',
+    'COD Amount',
+    'Note',
+  ];
+
+  const rows = orders.map((o) => {
+    return [
+      `"${o.orderNumber}"`,
+      `"${o.customerName.replace(/"/g, '""')}"`,
+      `"${o.customerPhone}"`,
+      `"${o.deliveryAddress.replace(/"/g, '""')}"`,
+      o.total,
+      `"${(o.notes || 'Allow customer to check parcel').replace(/"/g, '""')}"`,
+    ].join(',');
+  });
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${fileName}-${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

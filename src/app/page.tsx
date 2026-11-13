@@ -12,6 +12,7 @@ import { FlashSaleCountdown } from '@/components/FlashSaleCountdown';
 import { RecentlyViewed, recordProductView } from '@/components/RecentlyViewed';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { WhatsAppCheckoutModal } from '@/components/WhatsAppCheckoutModal';
+import { WhatsAppChatWidget } from '@/components/WhatsAppChatWidget';
 import { initialProducts, initialCategories } from '@/lib/mock-data';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
@@ -27,10 +28,11 @@ export default function HomePage() {
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
   const [quickBuyProduct, setQuickBuyProduct] = useState<Product | null>(null);
   const [isSpinModalOpen, setIsSpinModalOpen] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'price_high' | 'rating'>('popular');
 
-  // Filter products by search and category
+  // Filter products by search, category, and sort
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       const matchesCategory =
         selectedCategory === 'all' || p.category === selectedCategory;
       const matchesSearch =
@@ -39,7 +41,17 @@ export default function HomePage() {
         p.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [products, selectedCategory, searchQuery]);
+
+    return [...list].sort((a, b) => {
+      const priceA = a.discountPrice || a.basePrice;
+      const priceB = b.discountPrice || b.basePrice;
+
+      if (sortBy === 'price_low') return priceA - priceB;
+      if (sortBy === 'price_high') return priceB - priceA;
+      if (sortBy === 'rating') return (b.rating || 4.8) - (a.rating || 4.8);
+      return 0; // Default popular
+    });
+  }, [products, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col font-sans">
@@ -121,10 +133,10 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Section Header with Sort Selector */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <div>
-            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 tracking-tight">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               {selectedCategory === 'all'
                 ? 'জনপ্রিয় পণ্যসমূহ'
                 : initialCategories.find((c) => c.slug === selectedCategory)?.name}
@@ -132,6 +144,20 @@ export default function HomePage() {
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
               {filteredProducts.length} টি পণ্য পাওয়া গেছে
             </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <span className="text-xs text-gray-500 hidden sm:inline">সর্ট করুন:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="text-xs font-semibold py-1.5 px-3 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+            >
+              <option value="popular">জনপ্রিয় পণ্য</option>
+              <option value="price_low">দাম: কম থেকে বেশি</option>
+              <option value="price_high">দাম: বেশি থেকে কম</option>
+              <option value="rating">সেরা রেটিং</option>
+            </select>
           </div>
         </div>
 
@@ -179,17 +205,8 @@ export default function HomePage() {
         />
       </main>
 
-      {/* Floating WhatsApp Contact Button */}
-      <a
-        href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 sm:px-4 sm:py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-105 transition-all group"
-        title="হোয়াটসঅ্যাপে কথা বলুন"
-      >
-        <MessageCircle className="w-6 h-6 fill-white text-white" />
-        <span className="font-bold text-xs sm:text-sm hidden sm:inline">WhatsApp Help</span>
-      </a>
+      {/* Floating Smart WhatsApp Chat Widget with Quick FAQs */}
+      <WhatsAppChatWidget />
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-16 pt-12 pb-8">

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, Star, ShoppingBag, Eye, Zap } from 'lucide-react';
+import { Heart, Star, ShoppingBag, Eye, Zap, Flame } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 
@@ -60,6 +60,14 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
         {discountPercent > 0 && (
           <span className="absolute top-3 left-3 bg-rose-500 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-full shadow-xs">
             -{discountPercent}%
+          </span>
+        )}
+
+        {/* Low Stock Urgency Badge */}
+        {product.stock <= 5 && product.stock > 0 && (
+          <span className="absolute bottom-3 left-3 bg-rose-600/90 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1 z-10 animate-pulse">
+            <Flame className="w-3 h-3 text-amber-300" />
+            <span>মাত্র {product.stock} টি বাকি!</span>
           </span>
         )}
 

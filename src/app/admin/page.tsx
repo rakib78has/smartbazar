@@ -33,7 +33,7 @@ import { StoreSettings } from '@/types/store';
 import { initialProducts, initialOrders, initialStoreSettings, initialCategories } from '@/lib/mock-data';
 import { useCart } from '@/context/CartContext';
 import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
-import { exportOrdersToCSV } from '@/lib/export';
+import { exportOrdersToCSV, exportSteadfastCSV } from '@/lib/export';
 import {
   fetchProducts,
   saveProductToDb,
@@ -590,6 +590,25 @@ export default function AdminPage() {
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>এক্সেল এক্সপোর্ট</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const filtered = orders.filter((o) => {
+                      const matchesFilter = orderStatusFilter === 'all' || o.status === orderStatusFilter;
+                      const matchesQuery =
+                        o.orderNumber.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                        o.customerName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                        o.customerPhone.includes(orderSearch);
+                      return matchesFilter && matchesQuery;
+                    });
+                    exportSteadfastCSV(filtered);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition-colors shrink-0"
+                  title="Steadfast Merchant বাল্ক আপলোড ফরম্যাটে CSV ডাউনলোড করুন"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>স্টেডফাস্ট বাল্ক CSV</span>
                 </button>
               </div>
             </div>
