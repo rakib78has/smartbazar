@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Send, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useCart, CartItem } from '@/context/CartContext';
 import { orderFormSchema } from '@/lib/validation';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
 import { Order } from '@/types/order';
 import { saveOrderToDb } from '@/lib/db';
+import { playSuccessChime, triggerConfetti } from '@/lib/celebration';
+import { trackPixelEvent } from '@/lib/analytics';
 
 interface WhatsAppCheckoutModalProps {
   isOpen: boolean;
@@ -41,8 +43,6 @@ export function WhatsAppCheckoutModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  if (!isOpen) return null;
-
   // Determine active checkout items
   const activeItems = singleItem ? [singleItem] : cart;
   const activeSubtotal = singleItem ? singleItem.price * singleItem.quantity : subtotal;
@@ -54,6 +54,18 @@ export function WhatsAppCheckoutModal({
       : storeSettings.deliveryChargeOutsideDhaka;
   const activeDiscount = singleItem ? 0 : couponDiscount;
   const activeTotal = Math.max(0, activeSubtotal + activeDeliveryCharge - activeDiscount);
+
+  useEffect(() => {
+    if (isOpen && storeSettings.enableMetaPixelTracking !== false) {
+      trackPixelEvent('InitiateCheckout', {
+        value: activeTotal,
+        currency: 'BDT',
+        itemsCount: activeItems.length,
+      });
+    }
+  }, [isOpen, activeTotal, activeItems.length, storeSettings.enableMetaPixelTracking]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +148,22 @@ export function WhatsAppCheckoutModal({
     // 3. Clear cart if full cart checkout
     if (!singleItem) {
       clearCart();
+    }
+
+    // Trigger celebration sound and confetti if enabled
+    if (storeSettings.enableOrderCelebration !== false) {
+      playSuccessChime();
+      triggerConfetti();
+    }
+
+    // Track Meta Pixel and GA4 Purchase event
+    if (storeSettings.enableMetaPixelTracking !== false) {
+      trackPixelEvent('Purchase', {
+        orderId: orderNumber,
+        currency: 'BDT',
+        value: activeTotal,
+        itemsCount: activeItems.length,
+      });
     }
 
     setIsSubmitting(false);

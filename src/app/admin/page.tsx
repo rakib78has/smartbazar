@@ -30,6 +30,11 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  BarChart3,
+  Volume2,
+  PartyPopper,
+  Play,
+  RotateCcw,
 } from 'lucide-react';
 import { Product, ProductVariant } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
@@ -38,6 +43,13 @@ import { initialProducts, initialOrders, initialStoreSettings, initialCategories
 import { useCart } from '@/context/CartContext';
 import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
 import { exportOrdersToCSV, exportSteadfastCSV } from '@/lib/export';
+import { playSuccessChime, triggerConfetti } from '@/lib/celebration';
+import {
+  getAnalyticsAuditLogs,
+  clearAnalyticsAuditLogs,
+  trackPixelEvent,
+  AnalyticsEventRecord,
+} from '@/lib/analytics';
 import {
   fetchProducts,
   saveProductToDb,
@@ -51,9 +63,16 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { storeSettings, updateStoreSettings } = useCart();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'fraud' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'fraud' | 'analytics' | 'settings'>('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [newBlacklistPhone, setNewBlacklistPhone] = useState('');
+  const [analyticsLogs, setAnalyticsLogs] = useState<AnalyticsEventRecord[]>([]);
+
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      setAnalyticsLogs(getAnalyticsAuditLogs());
+    }
+  }, [activeTab]);
 
   // Authentication Guard
   useEffect(() => {
@@ -468,6 +487,28 @@ export default function AdminPage() {
 
             <button
               onClick={() => {
+                setActiveTab('analytics');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'analytics'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <BarChart3 className="w-4 h-4 text-purple-400" />
+                <span>পিক্সেল ও কনভার্সন ট্র্যাকিং</span>
+              </div>
+              <ChevronRight
+                className={`w-3.5 h-3.5 transition-transform ${
+                  activeTab === 'analytics' ? 'rotate-90' : 'text-gray-500'
+                }`}
+              />
+            </button>
+
+            <button
+              onClick={() => {
                 setActiveTab('settings');
                 setIsMobileSidebarOpen(false);
               }}
@@ -533,6 +574,7 @@ export default function AdminPage() {
               {activeTab === 'orders' && 'অর্ডার ও কুরিয়ার পাইপলাইন'}
               {activeTab === 'products' && 'পণ্য ও স্টক ইনভেন্টরি'}
               {activeTab === 'fraud' && 'ফ্রড প্রিভেনশন ও ব্ল্যাকলিস্ট হাব'}
+              {activeTab === 'analytics' && 'পিক্সেল ও কনভার্সন ট্র্যাকিং হাব'}
               {activeTab === 'settings' && 'স্টোর ও হোয়াটসঅ্যাপ কনফিগারেশন'}
             </span>
           </div>
@@ -1169,6 +1211,33 @@ export default function AdminPage() {
                 />
               </div>
 
+              {/* Order Celebration Toggle */}
+              <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200/70 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                    <PartyPopper className="w-4 h-4 text-amber-600" />
+                    <span>অর্ডার কনফার্মেশনে কনফেটি ও সাউন্ড সেলিব্রেশন</span>
+                  </h4>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    কাস্টমার হোয়াটসঅ্যাপে অর্ডার কনফার্ম করলে স্ক্রিনে আনন্দময় রঙিন কনফেটি ও মিষ্টি অডিও সুর বাজবে।
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer shrink-0 ml-4">
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.enableOrderCelebration !== false}
+                    onChange={(e) =>
+                      setSettingsForm({
+                        ...settingsForm,
+                        enableOrderCelebration: e.target.checked,
+                      })
+                    }
+                    className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                  />
+                  <span className="text-xs font-bold text-amber-900">চালু</span>
+                </label>
+              </div>
+
               <div className="pt-4 border-t border-gray-100 flex justify-end">
                 <button
                   type="submit"
@@ -1276,6 +1345,278 @@ export default function AdminPage() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 5: META PIXEL & GA4 CONVERSION TRACKING HUB ================= */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            {/* Header info card */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-xs">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-purple-600" />
+                    <span>মেটা (ফেসবুক) পিক্সেল ও গুগল অ্যানালিটিক্স হাব</span>
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    ফেসবুক বুস্টিং এবং গুগল বিজ্ঞাপনের কনভার্সন ট্র্যাক করতে আপনার Pixel ID ও GA4 ID বসিয়ে সংরক্ষণ করুন।
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-xl text-xs font-bold border ${
+                    settingsForm.enableMetaPixelTracking !== false
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                  }`}>
+                    {settingsForm.enableMetaPixelTracking !== false ? '● ট্র্যাকিং সক্রিয়' : '○ ট্র্যাকিং বন্ধ'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pixel & GA4 Configuration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 rounded-xl border border-purple-100 bg-purple-50/30">
+                  <label className="block font-bold text-xs text-purple-950 mb-1">
+                    Facebook Pixel ID
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsForm.facebookPixelId || ''}
+                    onChange={(e) =>
+                      setSettingsForm({ ...settingsForm, facebookPixelId: e.target.value })
+                    }
+                    placeholder="যেমন: 123456789012345"
+                    className="w-full px-3 py-2 text-xs border border-purple-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Meta Events Manager থেকে আপনার পিক্সেল আইডি কপি করে এখানে পেস্ট করুন।
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/30">
+                  <label className="block font-bold text-xs text-blue-950 mb-1">
+                    Google Analytics 4 / GTM ID
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsForm.googleAnalyticsId || ''}
+                    onChange={(e) =>
+                      setSettingsForm({ ...settingsForm, googleAnalyticsId: e.target.value })
+                    }
+                    placeholder="যেমন: G-XXXXXXXXXX বা GTM-XXXXXXX"
+                    className="w-full px-3 py-2 text-xs border border-blue-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Google Analytics মেজারমেন্ট আইডি বা ট্যাগ ম্যানেজার আইডি।
+                  </p>
+                </div>
+              </div>
+
+              {/* Tracking Controls & Save */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.enableMetaPixelTracking !== false}
+                    onChange={(e) =>
+                      setSettingsForm({
+                        ...settingsForm,
+                        enableMetaPixelTracking: e.target.checked,
+                      })
+                    }
+                    className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                  />
+                  <span className="text-xs font-bold text-gray-800">
+                    ই-কমার্স ইভেন্ট ট্র্যাকিং (PageView, AddToCart, InitiateCheckout, Purchase) সক্রিয় রাখুন
+                  </span>
+                </label>
+
+                <button
+                  onClick={handleSaveSettings}
+                  className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>পিক্সেল সেটিংস সেভ করুন</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ORDER CELEBRATION (CONFETTI & AUDIO) LIVE TESTER CARD */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 rounded-2xl p-6 border border-amber-200/60 shadow-xs">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-gray-900 flex items-center gap-2">
+                    <PartyPopper className="w-5 h-5 text-amber-600" />
+                    <span>অর্ডার সাকসেস কনফেটি ও অডিও ইফেক্ট টেস্ট হাব</span>
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1">
+                    গ্রাহক হোয়াটসঅ্যাপে অর্ডার প্লেস করার সাথে সাথে এই স্ক্রিন সেলিব্রেশন ঘটবে। নিচের বাটনগুলো দিয়ে টেস্ট করুন:
+                  </p>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-amber-200 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.enableOrderCelebration !== false}
+                    onChange={(e) => {
+                      const next = { ...settingsForm, enableOrderCelebration: e.target.checked };
+                      setSettingsForm(next);
+                      updateStoreSettings(next);
+                    }}
+                    className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                  />
+                  <span className="text-xs font-bold text-amber-950">সেলিব্রেশন চালু</span>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => playSuccessChime()}
+                  className="px-4 py-2.5 bg-white hover:bg-amber-50 text-amber-900 font-bold text-xs rounded-xl border border-amber-300 shadow-xs flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <Volume2 className="w-4 h-4 text-amber-600" />
+                  <span>🎵 মিষ্টি সাউন্ড টেস্ট করুন</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => triggerConfetti()}
+                  className="px-4 py-2.5 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-xl border border-rose-300 shadow-xs flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <Sparkles className="w-4 h-4 text-rose-600" />
+                  <span>🎊 রঙিন কনফেটি টেস্ট করুন</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSuccessChime();
+                    triggerConfetti();
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <PartyPopper className="w-4 h-4" />
+                  <span>🚀 সাউন্ড + কনফেটি একসাথে টেস্ট করুন</span>
+                </button>
+              </div>
+            </div>
+
+            {/* LIVE EVENT DISPATCH TESTER & AUDIT LOGS */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-xs">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Play className="w-4 h-4 text-purple-600" />
+                    <span>লাইভ টেস্ট ইভেন্ট ফায়ার ও অডিট লগ</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    ওয়েবসাইটে কাস্টমারদের অ্যাকশন থেকে যেসকল মেটা পিক্সেল ইভেন্ট ফায়ার হচ্ছে তার রিয়েলটাইম রেকর্ড।
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      clearAnalyticsAuditLogs();
+                      setAnalyticsLogs([]);
+                    }}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>লগ ক্লিয়ার</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Event trigger simulation buttons */}
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 mb-5 flex flex-wrap gap-2">
+                <span className="text-xs font-bold text-gray-700 flex items-center mr-2">ম্যানুয়াল টেস্ট:</span>
+                <button
+                  onClick={() => {
+                    trackPixelEvent('PageView', { page: '/admin' });
+                    setAnalyticsLogs(getAnalyticsAuditLogs());
+                  }}
+                  className="px-3 py-1 bg-white hover:bg-purple-50 text-purple-800 border border-purple-200 rounded-lg text-xs font-semibold"
+                >
+                  + টেস্ট PageView
+                </button>
+                <button
+                  onClick={() => {
+                    trackPixelEvent('AddToCart', { productName: 'প্রিমিয়াম ওভারসাইজড টি-শার্ট', price: 650, quantity: 1 });
+                    setAnalyticsLogs(getAnalyticsAuditLogs());
+                  }}
+                  className="px-3 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold"
+                >
+                  + টেস্ট AddToCart
+                </button>
+                <button
+                  onClick={() => {
+                    trackPixelEvent('InitiateCheckout', { value: 650, currency: 'BDT' });
+                    setAnalyticsLogs(getAnalyticsAuditLogs());
+                  }}
+                  className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg text-xs font-semibold"
+                >
+                  + টেস্ট InitiateCheckout
+                </button>
+                <button
+                  onClick={() => {
+                    trackPixelEvent('Purchase', { orderId: 'ORD-TEST-999', value: 1450, currency: 'BDT' });
+                    setAnalyticsLogs(getAnalyticsAuditLogs());
+                  }}
+                  className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold"
+                >
+                  + টেস্ট Purchase (৳১,৪৫০)
+                </button>
+              </div>
+
+              {/* Event Audit Log Table */}
+              {analyticsLogs.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                  <BarChart3 className="w-8 h-8 text-gray-400 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs text-gray-600 font-semibold">এখনো কোনো টেস্ট ইভেন্ট রেকর্ড হয়নি</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">উপরের বাটনগুলো চেপে ইভেন্ট পরীক্ষা করুন অথবা স্টোর থেকে কার্ট ও চেকআউট করুন</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 text-gray-600 uppercase font-semibold">
+                      <tr>
+                        <th className="p-3">সময়</th>
+                        <th className="p-3">ইভেন্টের নাম</th>
+                        <th className="p-3">প্ল্যাটফর্ম</th>
+                        <th className="p-3">প্যারামিটার / পে-লোড</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {analyticsLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-gray-50/60 font-mono">
+                          <td className="p-3 text-gray-500 text-[11px] whitespace-nowrap">{log.timestamp}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              log.event === 'Purchase'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : log.event === 'AddToCart'
+                                ? 'bg-amber-100 text-amber-800'
+                                : log.event === 'InitiateCheckout'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {log.event}
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-600 text-[11px]">{log.platform}</td>
+                          <td className="p-3 text-gray-700 text-[11px] max-w-md truncate">
+                            {JSON.stringify(log.params || {})}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

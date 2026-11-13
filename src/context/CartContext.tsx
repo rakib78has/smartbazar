@@ -5,6 +5,7 @@ import { OrderItem } from '@/types/order';
 import { initialStoreSettings } from '@/lib/mock-data';
 import { StoreSettings } from '@/types/store';
 import { Coupon, initialCoupons } from '@/types/coupon';
+import { trackPixelEvent } from '@/lib/analytics';
 
 export interface CartItem extends OrderItem {
   maxStock: number;
@@ -95,6 +96,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, newItem];
     });
+    if (storeSettings.enableMetaPixelTracking !== false) {
+      trackPixelEvent('AddToCart', {
+        productName: newItem.productName,
+        productId: newItem.productId,
+        price: newItem.price,
+        quantity: newItem.quantity,
+      });
+    }
     setIsCartOpen(true);
   };
 

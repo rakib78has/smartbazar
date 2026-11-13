@@ -18,6 +18,10 @@ export const initialStoreSettings: StoreSettings = {
   announcementActive: true,
   facebookUrl: 'https://facebook.com',
   instagramUrl: 'https://instagram.com',
+  facebookPixelId: '123456789012345',
+  googleAnalyticsId: 'G-SB12345678',
+  enableOrderCelebration: true,
+  enableMetaPixelTracking: true,
 };
 
 export const initialCategories: Category[] = [

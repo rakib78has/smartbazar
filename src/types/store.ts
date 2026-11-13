@@ -15,4 +15,8 @@ export interface StoreSettings {
   announcementActive: boolean;
   facebookUrl?: string;
   instagramUrl?: string;
+  facebookPixelId?: string;
+  googleAnalyticsId?: string;
+  enableOrderCelebration?: boolean;
+  enableMetaPixelTracking?: boolean;
 }
