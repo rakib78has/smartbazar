@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Gift, ShoppingBag, Truck, MessageCircle } from 'lucide-react';
+import { Home, Gift, ShoppingBag, Truck, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
 
 interface MobileBottomNavProps {
   onOpenSpinWheel?: () => void;
@@ -12,7 +13,8 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ onOpenSpinWheel }: MobileBottomNavProps) {
   const pathname = usePathname();
-  const { totalItems, setIsCartOpen, storeSettings } = useCart();
+  const { totalItems, setIsCartOpen } = useCart();
+  const { isCustomerLoggedIn, customer } = useCustomerAuth();
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:hidden">
@@ -68,16 +70,20 @@ export function MobileBottomNav({ onOpenSpinWheel }: MobileBottomNavProps) {
           <span className="text-[10px]">ট্র্যাক</span>
         </Link>
 
-        {/* WhatsApp Help */}
-        <a
-          href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center gap-1 py-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors"
+        {/* Customer Account / Profile */}
+        <Link
+          href={isCustomerLoggedIn ? '/account' : '/login'}
+          className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+            pathname === '/account' || pathname === '/login' || pathname === '/register'
+              ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+          }`}
         >
-          <MessageCircle className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">চ্যাট</span>
-        </a>
+          <User className="w-5 h-5" />
+          <span className="text-[10px] truncate max-w-[50px]">
+            {isCustomerLoggedIn && customer ? customer.name.split(' ')[0] : 'অ্যাকাউন্ট'}
+          </span>
+        </Link>
       </div>
     </nav>
   );

@@ -9,6 +9,7 @@ import { Order } from '@/types/order';
 import { saveOrderToDb } from '@/lib/db';
 import { playSuccessChime, triggerConfetti } from '@/lib/celebration';
 import { trackPixelEvent } from '@/lib/analytics';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
 
 interface WhatsAppCheckoutModalProps {
   isOpen: boolean;
@@ -42,6 +43,18 @@ export function WhatsAppCheckoutModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const { customer } = useCustomerAuth();
+
+  // Auto-fill logged-in customer info if available
+  useEffect(() => {
+    if (isOpen && customer) {
+      if (!name) setName(customer.name);
+      if (!phone) setPhone(customer.phone);
+      if (!address && customer.defaultAddress) setAddress(customer.defaultAddress);
+      if (customer.deliveryZone) setDeliveryZone(customer.deliveryZone);
+    }
+  }, [isOpen, customer]);
 
   // Determine active checkout items
   const activeItems = singleItem ? [singleItem] : cart;
@@ -276,6 +289,16 @@ export function WhatsAppCheckoutModal({
                 </div>
               </div>
             </div>
+
+            {/* Logged in customer badge */}
+            {customer && (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 mb-4">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  লগইন করা আছে: <strong>{customer.name}</strong> ({customer.phone}) — আপনার সংরক্ষিত তথ্য স্বয়ংক্রিয়ভাবে বসানো হয়েছে
+                </span>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">

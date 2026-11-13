@@ -4,6 +4,7 @@ import './globals.css';
 import { CartProvider } from '@/context/CartContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { CustomerAuthProvider } from '@/context/CustomerAuthContext';
 import { InstallPwaBanner } from '@/components/InstallPwaBanner';
 
 const geistSans = Geist({
@@ -49,10 +50,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
         <ThemeProvider>
           <LanguageProvider>
-            <CartProvider>
-              {children}
-              <InstallPwaBanner />
-            </CartProvider>
+            <CustomerAuthProvider>
+              <CartProvider>
+                {children}
+                <InstallPwaBanner />
+              </CartProvider>
+            </CustomerAuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

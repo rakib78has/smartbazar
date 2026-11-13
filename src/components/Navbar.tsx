@@ -2,16 +2,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck, Moon, Sun, Globe } from 'lucide-react';
+import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck, Moon, Sun, Globe, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
 
 interface NavbarProps {
   onSearch?: (query: string) => void;
 }
 
 export function Navbar({ onSearch }: NavbarProps) {
+  const { customer, isCustomerLoggedIn } = useCustomerAuth();
   const { totalItems, wishlist, storeSettings, setIsCartOpen } = useCart();
   const { language, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -110,6 +112,26 @@ export function Navbar({ onSearch }: NavbarProps) {
               <span>{t('trackOrder')}</span>
             </Link>
 
+            {/* Customer Account / Login Button */}
+            {isCustomerLoggedIn && customer ? (
+              <Link
+                href="/account"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
+                title="আমার অ্যাকাউন্ট"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="max-w-[80px] truncate">{customer.name.split(' ')[0]}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>লগইন</span>
+              </Link>
+            )}
+
             {/* WhatsApp Contact Button */}
             <a
               href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}`}
@@ -174,6 +196,54 @@ export function Navbar({ onSearch }: NavbarProps) {
             />
           </div>
         </div>
+
+        {/* Mobile Dropdown Drawer */}
+        {isMobileMenuOpen && (
+          <div className="sm:hidden border-t border-gray-100 dark:border-gray-800 py-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+            <Link
+              href="/"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <span>হোম পেজ</span>
+            </Link>
+            <Link
+              href="/track-order"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Truck className="w-4 h-4 text-emerald-600" />
+              <span>{t('trackOrder')}</span>
+            </Link>
+            {isCustomerLoggedIn && customer ? (
+              <Link
+                href="/account"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50"
+              >
+                <User className="w-4 h-4 text-emerald-600" />
+                <span>আমার অ্যাকাউন্ট ({customer.name})</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <User className="w-4 h-4 text-gray-500" />
+                <span>লগইন / রেজিস্টার</span>
+              </Link>
+            )}
+            <Link
+              href="/admin"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4 text-gray-400" />
+              <span>অ্যাডমিন প্যানেল</span>
+            </Link>
+          </div>
+        )}
       </div>
     </header>
   );
