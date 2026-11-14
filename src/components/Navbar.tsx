@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck, Moon, Sun, Globe, User } from 'lucide-react';
+import { ShoppingBag, Heart, Search, PhoneCall, ShieldCheck, Menu, X, Truck, Moon, Sun, Globe, User, Mic } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -19,11 +19,52 @@ export function Navbar({ onSearch }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
     if (onSearch) onSearch(query);
+  };
+
+  const startVoiceSearch = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition =
+      (window as unknown as { SpeechRecognition?: any }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('আপনার ব্রাউজারে ভয়েস সার্চ সাপোর্ট করে না। Google Chrome ব্যবহার করার পরামর্শ দেওয়া হচ্ছে।');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      setIsListening(true);
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchQuery(transcript);
+        if (onSearch) onSearch(transcript);
+        setIsListening(false);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
   };
 
   return (
@@ -72,8 +113,21 @@ export function Navbar({ onSearch }: NavbarProps) {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder={t('searchPlaceholder')}
-                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-full focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-full focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
               />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${
+                  isListening
+                    ? 'bg-rose-500 text-white animate-pulse'
+                    : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title="ভয়েস দিয়ে সার্চ করুন (বাংলা / English)"
+                aria-label="ভয়েস সার্চ"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -192,8 +246,21 @@ export function Navbar({ onSearch }: NavbarProps) {
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder={t('searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
+            <button
+              type="button"
+              onClick={startVoiceSearch}
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${
+                isListening
+                  ? 'bg-rose-500 text-white animate-pulse'
+                  : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+              title="ভয়েস দিয়ে সার্চ করুন (বাংলা / English)"
+              aria-label="ভয়েস সার্চ"
+            >
+              <Mic className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

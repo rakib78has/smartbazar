@@ -12,6 +12,10 @@ interface BuildWhatsAppMessageProps {
   discount: number;
   total: number;
   notes?: string;
+  paymentMethod?: 'cod' | 'bkash' | 'nagad';
+  paymentTrxId?: string;
+  paymentSenderPhone?: string;
+  deliveryTimeSlot?: string;
 }
 
 /**
@@ -44,6 +48,10 @@ export function buildOrderMessage({
   discount,
   total,
   notes,
+  paymentMethod,
+  paymentTrxId,
+  paymentSenderPhone,
+  deliveryTimeSlot,
 }: BuildWhatsAppMessageProps): string {
   const itemsText = items
     .map(
@@ -51,6 +59,13 @@ export function buildOrderMessage({
         `${idx + 1}. *${item.productName}*${item.variantName ? ` (${item.variantName})` : ''}\n   পরিমাণ: ${item.quantity} টি | দাম: ৳${item.price * item.quantity}`
     )
     .join('\n');
+
+  let paymentText = '💵 ক্যাশ অন ডেলিভারি (হাতে পেয়ে মূল্য পরিশোধ)';
+  if (paymentMethod === 'bkash') {
+    paymentText = `📱 বিকাশ (bKash Send Money)\n   TrxID: ${paymentTrxId || 'N/A'}${paymentSenderPhone ? `\n   প্রেরকের নম্বর: ${paymentSenderPhone}` : ''}`;
+  } else if (paymentMethod === 'nagad') {
+    paymentText = `📱 নগদ (Nagad Send Money)\n   TrxID: ${paymentTrxId || 'N/A'}${paymentSenderPhone ? `\n   প্রেরকের নম্বর: ${paymentSenderPhone}` : ''}`;
+  }
 
   return `🛍️ *নতুন অর্ডার রিকোয়েস্ট*
 ${orderNumber ? `অর্ডার নম্বর: #${orderNumber}\n` : ''}---------------------------------
@@ -60,11 +75,14 @@ ${itemsText}
 🚚 ডেলিভারি চার্জ (${deliveryZoneText}): ৳${deliveryCharge}
 ${discount > 0 ? `🏷️ ডিসকাউন্ট: -৳${discount}\n` : ''}💵 *সর্বমোট প্রদেয়: ৳${total}*
 ---------------------------------
+💳 *পেমেন্ট পদ্ধতি:*
+${paymentText}
+---------------------------------
 👤 *কাস্টমারের তথ্য:*
 নাম: ${customerName}
 মোবাইল: ${customerPhone}
 ঠিকানা: ${deliveryAddress}
-${notes ? `নোট: ${notes}\n` : ''}---------------------------------
+${deliveryTimeSlot ? `⏰ পছন্দসই সময়: ${deliveryTimeSlot}\n` : ''}${notes ? `নোট: ${notes}\n` : ''}---------------------------------
 _অনুগ্রহ করে অর্ডারটি কনফার্ম করুন। ধন্যবাদ!_`;
 }
 

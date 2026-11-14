@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, Star, ShoppingBag, Eye, Zap, Flame } from 'lucide-react';
+import { Heart, Star, ShoppingBag, Eye, Zap, Flame, Share2 } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 
@@ -73,6 +73,21 @@ export function ProductCard({ product, onOpenDetails, onQuickBuy }: ProductCardP
             <span>মাত্র {product.stock} টি বাকি!</span>
           </span>
         )}
+
+        {/* Share Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const text = `🔥 স্মার্টবাজারে সেরা অফার: ${product.name} মাত্র ৳${price}! দেখুন: ${
+              typeof window !== 'undefined' ? window.location.origin : ''
+            }`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+          }}
+          className="absolute top-3 right-11 p-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xs text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 hover:text-emerald-600 shadow-xs transition-all"
+          title="বন্ধুদের সাথে হোয়াটসঅ্যাপে শেয়ার করুন"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+        </button>
 
         {/* Wishlist Button */}
         <button

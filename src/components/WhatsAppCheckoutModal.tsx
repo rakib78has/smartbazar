@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Send, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Send, ShieldCheck, AlertCircle, CheckCircle2, Copy, Check, Clock } from 'lucide-react';
 import { useCart, CartItem } from '@/context/CartContext';
 import { orderFormSchema } from '@/lib/validation';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
@@ -39,12 +39,19 @@ export function WhatsAppCheckoutModal({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bkash' | 'nagad'>('cod');
+  const [paymentTrxId, setPaymentTrxId] = useState('');
+  const [paymentSenderPhone, setPaymentSenderPhone] = useState('');
+  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('যেকোনো সময়');
+  const [copiedNumber, setCopiedNumber] = useState(false);
   const [honeypot, setHoneypot] = useState(''); // Anti-bot field
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [useCoins, setUseCoins] = useState(false);
 
-  const { customer } = useCustomerAuth();
+  const { customer, updateProfile } = useCustomerAuth();
+  const availableCoins = customer?.rewardCoins ?? 0;
 
   // Auto-fill logged-in customer info if available
   useEffect(() => {
@@ -65,7 +72,8 @@ export function WhatsAppCheckoutModal({
       : deliveryZone === 'inside_dhaka'
       ? storeSettings.deliveryChargeInsideDhaka
       : storeSettings.deliveryChargeOutsideDhaka;
-  const activeDiscount = singleItem ? 0 : couponDiscount;
+  const coinDiscount = useCoins ? Math.min(availableCoins, activeSubtotal) : 0;
+  const activeDiscount = (singleItem ? 0 : couponDiscount) + coinDiscount;
   const activeTotal = Math.max(0, activeSubtotal + activeDeliveryCharge - activeDiscount);
 
   useEffect(() => {
@@ -130,7 +138,11 @@ export function WhatsAppCheckoutModal({
       deliveryCharge: activeDeliveryCharge,
       discount: activeDiscount,
       total: activeTotal,
-      notes,
+      notes: notes.trim(),
+      paymentMethod,
+      paymentTrxId: paymentTrxId.trim(),
+      paymentSenderPhone: paymentSenderPhone.trim(),
+      deliveryTimeSlot: deliveryTimeSlot !== 'যেকোনো সময়' ? deliveryTimeSlot : undefined,
     });
 
     // 2. Save Order to DB (Supabase & localStorage for Admin Panel pipeline)
@@ -141,7 +153,7 @@ export function WhatsAppCheckoutModal({
       customerPhone: sanitizedPhone,
       deliveryAddress: address,
       deliveryZone,
-      notes,
+      notes: notes.trim(),
       items: activeItems,
       subtotal: activeSubtotal,
       deliveryCharge: activeDeliveryCharge,
@@ -149,6 +161,10 @@ export function WhatsAppCheckoutModal({
       total: activeTotal,
       status: 'pending',
       channel: 'whatsapp',
+      paymentMethod,
+      paymentTrxId: paymentTrxId.trim(),
+      paymentSenderPhone: paymentSenderPhone.trim(),
+      deliveryTimeSlot: deliveryTimeSlot !== 'যেকোনো সময়' ? deliveryTimeSlot : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -160,6 +176,13 @@ export function WhatsAppCheckoutModal({
       );
       localStorage.setItem('smartbazar_orders', JSON.stringify([newOrder, ...existingOrders]));
     } catch {}
+
+    // Deduct redeemed coins if used
+    if (useCoins && coinDiscount > 0 && updateProfile) {
+      updateProfile({
+        rewardCoins: Math.max(0, availableCoins - coinDiscount),
+      });
+    }
 
     // 3. Clear cart if full cart checkout
     if (!singleItem) {
@@ -279,8 +302,26 @@ export function WhatsAppCheckoutModal({
                 </div>
                 {activeDiscount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-bold">
-                    <span>কুপন ডিসকাউন্ট</span>
+                    <span>মোট ডিসকাউন্ট {coinDiscount > 0 ? '(কুপন + কয়েন)' : ''}</span>
                     <span>-৳{activeDiscount}</span>
+                  </div>
+                )}
+                {customer && availableCoins > 0 && (
+                  <div className="pt-2 pb-1 border-t border-gray-200">
+                    <label className="flex items-center justify-between text-xs cursor-pointer py-1 px-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">
+                      <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200">
+                        <input
+                          type="checkbox"
+                          checked={useCoins}
+                          onChange={(e) => setUseCoins(e.target.checked)}
+                          className="w-3.5 h-3.5 text-emerald-600 rounded-sm"
+                        />
+                        <span>🪙 {availableCoins} কয়েন রিডিম করুন</span>
+                      </div>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                        -৳{Math.min(availableCoins, activeSubtotal)}
+                      </span>
+                    </label>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200">
@@ -413,6 +454,129 @@ export function WhatsAppCheckoutModal({
                     <AlertCircle className="w-3.5 h-3.5" />
                     {errors.deliveryAddress}
                   </p>
+                )}
+              </div>
+
+              {/* Preferred Delivery Time Slot */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>ডেলিভারির সুবিধাজনক সময় (ঐচ্ছিক)</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  {['যেকোনো সময়', 'সকাল ১০টা - ১টা', 'দুপুর ২টা - ৫টা', 'বিকেল ৫টা - ৮টা', 'ছুটির দিন'].map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setDeliveryTimeSlot(slot)}
+                      className={`py-1.5 px-2 rounded-lg border text-center transition-all ${
+                        deliveryTimeSlot === slot
+                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  পেমেন্ট পদ্ধতি বেছে নিন <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cod')}
+                    className={`py-2 px-2 rounded-xl border text-center font-medium transition-all ${
+                      paymentMethod === 'cod'
+                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-600/20 font-bold'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    💵 ক্যাশ অন ডেলিভারি
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('bkash')}
+                    className={`py-2 px-2 rounded-xl border text-center font-medium transition-all ${
+                      paymentMethod === 'bkash'
+                        ? 'border-pink-600 bg-pink-50 dark:bg-pink-950 text-pink-700 dark:text-pink-300 ring-2 ring-pink-600/20 font-bold'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    🌸 বিকাশ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('nagad')}
+                    className={`py-2 px-2 rounded-xl border text-center font-medium transition-all ${
+                      paymentMethod === 'nagad'
+                        ? 'border-orange-600 bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300 ring-2 ring-orange-600/20 font-bold'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    🔶 নগদ
+                  </button>
+                </div>
+
+                {/* bKash / Nagad Send Money Box */}
+                {paymentMethod !== 'cod' && (
+                  <div className="mt-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-900 dark:text-amber-200">
+                        {paymentMethod === 'bkash' ? 'বিকাশ পার্সোনাল নম্বর' : 'নগদ পার্সোনাল নম্বর'}:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined') {
+                            navigator.clipboard.writeText(storeSettings.primaryWhatsAppNumber);
+                            setCopiedNumber(true);
+                            setTimeout(() => setCopiedNumber(false), 2000);
+                          }
+                        }}
+                        className="flex items-center gap-1 font-mono font-bold bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition-colors shadow-2xs"
+                      >
+                        {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{storeSettings.primaryWhatsAppNumber}</span>
+                        <span className="text-[10px] text-gray-500">{copiedNumber ? 'কপি হয়েছে' : 'কপি'}</span>
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      💡 উপরোক্ত নম্বরে <strong>Send Money</strong> করে নিচে ট্রানজেকশন আইডি (TrxID) বসিয়ে দিন।
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-0.5">
+                          ট্রানজেকশন আইডি (TrxID) *
+                        </label>
+                        <input
+                          type="text"
+                          value={paymentTrxId}
+                          onChange={(e) => setPaymentTrxId(e.target.value)}
+                          placeholder="যেমন: 9K32LM8P"
+                          className="w-full px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs uppercase font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-0.5">
+                          প্রেরকের মোবাইল নম্বর
+                        </label>
+                        <input
+                          type="tel"
+                          value={paymentSenderPhone}
+                          onChange={(e) => setPaymentSenderPhone(e.target.value)}
+                          placeholder="01XXXXXXXXX"
+                          className="w-full px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 

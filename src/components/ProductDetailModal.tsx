@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, ShoppingBag, Send, ShieldCheck, Truck, RefreshCw, Star, MessageSquare } from 'lucide-react';
+import { X, Check, ShoppingBag, Send, ShieldCheck, Truck, RefreshCw, Star, MessageSquare, Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { Product, ProductVariant, ProductReview } from '@/types/product';
 import { useCart } from '@/context/CartContext';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { WhatsAppCheckoutModal } from './WhatsAppCheckoutModal';
 
 interface ProductDetailModalProps {
@@ -14,10 +15,12 @@ interface ProductDetailModalProps {
 
 export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailModalProps) {
   const { addToCart } = useCart();
+  const { customer } = useCustomerAuth();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isQuickCheckoutOpen, setIsQuickCheckoutOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Review form states
   const [reviews, setReviews] = useState<ProductReview[]>([]);
@@ -25,6 +28,27 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Autofill reviewer name if customer is logged in
+  useEffect(() => {
+    if (customer && !reviewName) {
+      setReviewName(customer.name);
+    }
+  }, [customer, reviewName]);
+
+  const handleShareWhatsApp = () => {
+    if (!product || typeof window === 'undefined') return;
+    const url = window.location.href;
+    const text = `🔥 স্মার্টবাজারে আকর্ষণীয় অফার: ${product.name} মাত্র ৳${selectedVariant?.price || product.discountPrice || product.basePrice}!\nদেখুন: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    if (typeof window === 'undefined') return;
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   // Load reviews from localStorage on open
   useEffect(() => {
@@ -131,12 +155,29 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
         <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100 relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-xs transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5">
+            <button
+              onClick={handleShareWhatsApp}
+              className="p-1.5 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-full border border-emerald-200 dark:border-emerald-800 shadow-2xs transition-colors flex items-center gap-1 text-[11px] font-bold px-2.5"
+              title="হোয়াটসঅ্যাপে শেয়ার করুন"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">শেয়ার</span>
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="p-2 text-gray-600 dark:text-gray-300 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-2xs border border-gray-200 dark:border-gray-700 transition-colors"
+              title="লিংক কপি করুন"
+            >
+              {copiedLink ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-2xs border border-gray-200 dark:border-gray-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 sm:p-8">
             {/* Left: Image Gallery */}

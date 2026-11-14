@@ -18,17 +18,20 @@ import {
   ArrowRight,
   ShieldCheck,
   Phone,
+  RotateCcw,
+  XCircle,
 } from 'lucide-react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useCart } from '@/context/CartContext';
 import { Navbar } from '@/components/Navbar';
-import { fetchOrders } from '@/lib/db';
+import { CartDrawer } from '@/components/CartDrawer';
+import { fetchOrders, updateOrderStatusInDb } from '@/lib/db';
 import { Order } from '@/types/order';
 
 export default function CustomerAccountPage() {
   const router = useRouter();
   const { customer, isCustomerLoggedIn, logout, updateProfile } = useCustomerAuth();
-  const { wishlist, storeSettings } = useCart();
+  const { wishlist, storeSettings, addToCart, setIsCartOpen } = useCart();
   const [activeTab, setActiveTab] = useState<'orders' | 'address' | 'wishlist'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
@@ -61,6 +64,25 @@ export default function CustomerAccountPage() {
       });
     }
   }, [customer]);
+
+  const handleReorder = (ord: Order) => {
+    ord.items.forEach((item) => {
+      addToCart({
+        ...item,
+        maxStock: 99,
+      });
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (window.confirm('আপনি কি নিশ্চিতভাবে এই অর্ডারটি বাতিল করতে চান?')) {
+      await updateOrderStatusInDb(orderId, 'cancelled');
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o))
+      );
+    }
+  };
 
   if (!customer) {
     return (
@@ -105,6 +127,10 @@ export default function CustomerAccountPage() {
                 </span>
                 <span>•</span>
                 <span>মেম্বার আইডি: {customer.id}</span>
+                <span>•</span>
+                <span className="bg-amber-400/20 text-amber-200 border border-amber-300/30 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  🪙 রিওয়ার্ড কয়েন: {customer.rewardCoins ?? 50} (৳{customer.rewardCoins ?? 50} ক্যাশব্যাক ছাড়)
+                </span>
               </div>
             </div>
           </div>
@@ -237,13 +263,13 @@ export default function CustomerAccountPage() {
                       মোট প্রদেয়: <span className="font-black text-gray-900 dark:text-white text-sm">৳{ord.total}</span> (ক্যাশ অন ডেলিভারি)
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/track-order?search=${ord.orderNumber}`}
                         className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold flex items-center gap-1 transition-colors"
                       >
                         <Truck className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>লাইভ ট্র্যাকিং</span>
+                        <span>ট্র্যাকিং</span>
                       </Link>
 
                       <button
@@ -253,6 +279,26 @@ export default function CustomerAccountPage() {
                         <Printer className="w-3.5 h-3.5" />
                         <span>ক্যাশ মেমো</span>
                       </button>
+
+                      <button
+                        onClick={() => handleReorder(ord)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold flex items-center gap-1 shadow-xs transition-colors"
+                        title="পণ্যগুলো পুনরায় কার্টে যোগ করুন"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>আবার কিনুন</span>
+                      </button>
+
+                      {ord.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancelOrder(ord.id)}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-xl font-semibold flex items-center gap-1 transition-colors"
+                          title="অর্ডারটি বাতিল করুন"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>বাতিল করুন</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -425,6 +471,9 @@ export default function CustomerAccountPage() {
           </div>
         </div>
       )}
+
+      {/* Cart Drawer for Re-Order */}
+      <CartDrawer />
     </div>
   );
 }

@@ -15,6 +15,7 @@ const initialCustomer: UserProfile = {
   defaultAddress: 'বাড়ি # ১২, রোড # ৪, সেক্টর-৩, উত্তরা',
   deliveryCity: 'ঢাকা',
   deliveryZone: 'inside_dhaka',
+  rewardCoins: 50, // 50 coins = ৳50
   createdAt: '2026-11-01T10:00:00Z',
 };
 

@@ -18,7 +18,7 @@ import {
 import { Navbar } from '@/components/Navbar';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Order, OrderStatus } from '@/types/order';
-import { fetchOrders } from '@/lib/db';
+import { fetchOrders, updateOrderStatusInDb } from '@/lib/db';
 import { useCart } from '@/context/CartContext';
 
 function getCourierTrackingUrl(courierName?: string, trackingCode?: string): string {
@@ -345,6 +345,39 @@ export default function TrackOrderPage() {
                           সর্বমোট: ৳{order.total} (ক্যাশ অন ডেলিভারি)
                         </span>
                       </div>
+
+                      {order.status === 'pending' && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                            ⏳ অর্ডারটি এখনো প্রসেসিং শুরু হয়নি — আপনি পরিবর্তন বা বাতিল করতে পারেন
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`https://wa.me/${storeSettings.primaryWhatsAppNumber}?text=${encodeURIComponent(
+                                `আসসালামু আলাইকুম, আমি আমার অর্ডার #${order.orderNumber} এর ঠিকানা বা আইটেম পরিবর্তন করতে চাই।`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg font-semibold transition-colors"
+                            >
+                              হোয়াটসঅ্যাপে পরিবর্তন
+                            </a>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('আপনি কি নিশ্চিতভাবে এই অর্ডারটি বাতিল করতে চান?')) {
+                                  await updateOrderStatusInDb(order.id, 'cancelled');
+                                  setMatchingOrders((prev: Order[]) =>
+                                    prev.map((o) => (o.id === order.id ? { ...o, status: 'cancelled' } : o))
+                                  );
+                                }
+                              }}
+                              className="px-2.5 py-1 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg font-semibold transition-colors"
+                            >
+                              অর্ডার বাতিল
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -9,6 +9,8 @@ export type OrderStatus =
 
 export type DeliveryZone = 'inside_dhaka' | 'outside_dhaka';
 
+export type PaymentMethod = 'cod' | 'bkash' | 'nagad';
+
 export interface OrderItem {
   productId: string;
   variantId?: string;
@@ -38,6 +40,10 @@ export interface Order {
   courierName?: string;
   channel: 'whatsapp' | 'website';
   isFlaggedRisky?: boolean;
+  paymentMethod?: PaymentMethod;
+  paymentTrxId?: string;
+  paymentSenderPhone?: string;
+  deliveryTimeSlot?: string;
   createdAt: string;
   updatedAt: string;
 }

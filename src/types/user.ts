@@ -7,6 +7,7 @@ export interface UserProfile {
   defaultAddress?: string;
   deliveryCity?: string;
   deliveryZone?: 'inside_dhaka' | 'outside_dhaka';
+  rewardCoins?: number; // 1 coin = 1 BDT discount
   createdAt: string;
 }
 

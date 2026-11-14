@@ -139,6 +139,16 @@ export async function fetchOrders(): Promise<Order[]> {
 }
 
 export async function saveOrderToDb(order: Order): Promise<boolean> {
+  // Always persist locally
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('smartbazar_orders');
+      const existing: Order[] = saved ? JSON.parse(saved) : initialOrders;
+      const filtered = existing.filter((o) => o.id !== order.id);
+      localStorage.setItem('smartbazar_orders', JSON.stringify([order, ...filtered]));
+    } catch {}
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { error } = await supabase.from('orders').insert([
@@ -165,17 +175,32 @@ export async function saveOrderToDb(order: Order): Promise<boolean> {
       if (!error) return true;
     } catch {}
   }
-  return false;
+  return true;
 }
 
 export async function updateOrderStatusInDb(orderId: string, status: OrderStatus): Promise<boolean> {
+  // Update in localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('smartbazar_orders');
+      const existing: Order[] = saved ? JSON.parse(saved) : initialOrders;
+      const updated = existing.map((o) =>
+        o.id === orderId ? { ...o, status, updatedAt: new Date().toISOString() } : o
+      );
+      localStorage.setItem('smartbazar_orders', JSON.stringify(updated));
+    } catch {}
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
       if (!error) return true;
     } catch {}
   }
-  return false;
+  return true;
 }
 
 /**
