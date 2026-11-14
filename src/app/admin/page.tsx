@@ -35,10 +35,22 @@ import {
   PartyPopper,
   Play,
   RotateCcw,
+  Users,
+  Star,
+  Ticket,
+  Coins,
+  MessageSquare,
+  Award,
+  Gift,
+  Check,
+  Copy,
 } from 'lucide-react';
-import { Product, ProductVariant } from '@/types/product';
+import { Product, ProductVariant, ProductReview } from '@/types/product';
 import { Order, OrderStatus } from '@/types/order';
 import { StoreSettings } from '@/types/store';
+import { Coupon, initialCoupons } from '@/types/coupon';
+import { UserProfile } from '@/types/user';
+import { getRegisteredCustomers } from '@/lib/user-auth';
 import { initialProducts, initialOrders, initialStoreSettings, initialCategories } from '@/lib/mock-data';
 import { useCart } from '@/context/CartContext';
 import { isUserAuthenticated, logoutAdmin } from '@/lib/auth';
@@ -63,10 +75,78 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { storeSettings, updateStoreSettings } = useCart();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'fraud' | 'analytics' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    | 'overview'
+    | 'orders'
+    | 'products'
+    | 'customers'
+    | 'reviews'
+    | 'coupons'
+    | 'fraud'
+    | 'analytics'
+    | 'settings'
+  >('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [newBlacklistPhone, setNewBlacklistPhone] = useState('');
   const [analyticsLogs, setAnalyticsLogs] = useState<AnalyticsEventRecord[]>([]);
+
+  // Customer Directory State
+  const [customers, setCustomers] = useState<UserProfile[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [bonusCoinsAmount, setBonusCoinsAmount] = useState<number>(50);
+  const [selectedCustomerForCoins, setSelectedCustomerForCoins] = useState<UserProfile | null>(null);
+
+  // Reviews Moderation State
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewSearch, setReviewSearch] = useState('');
+
+  // Coupon Manager State
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [newCouponCode, setNewCouponCode] = useState('');
+  const [newCouponType, setNewCouponType] = useState<'fixed' | 'percentage'>('fixed');
+  const [newCouponValue, setNewCouponValue] = useState<number>(100);
+  const [newCouponMinSpend, setNewCouponMinSpend] = useState<number>(1000);
+  const [isAddingCoupon, setIsAddingCoupon] = useState(false);
+
+  // Load Customers, Reviews, and Coupons on mount or tab switch
+  useEffect(() => {
+    setCustomers(getRegisteredCustomers());
+    try {
+      const savedReviews = localStorage.getItem('smartbazar_reviews');
+      if (savedReviews && JSON.parse(savedReviews).length > 0) {
+        setReviews(JSON.parse(savedReviews));
+      } else {
+        const seedReviews: ProductReview[] = [
+          {
+            id: 'rev-seed-1',
+            productId: 'prod-1',
+            customerName: 'রাকিব হাসান',
+            rating: 5,
+            comment: 'কাপড়ের কোয়ালিটি অনেক ভালো এবং সাইজ একদম পারফেক্ট হয়েছে। ধন্যবাদ স্মার্টবাজার!',
+            createdAt: '১০ মে, ২০২৪',
+            isApproved: true,
+          },
+          {
+            id: 'rev-seed-2',
+            productId: 'prod-2',
+            customerName: 'সাদিয়া ইসলাম',
+            rating: 4,
+            comment: 'ডেলিভারি দ্রুত ছিল। প্রোডাক্ট যেমন দেখেছি তেমনই পেয়েছি।',
+            createdAt: '২ দিন আগে',
+            isApproved: false,
+          },
+        ];
+        setReviews(seedReviews);
+        localStorage.setItem('smartbazar_reviews', JSON.stringify(seedReviews));
+      }
+      const savedCoupons = localStorage.getItem('smartbazar_coupons');
+      if (savedCoupons) {
+        setCoupons(JSON.parse(savedCoupons));
+      } else {
+        setCoupons(initialCoupons);
+      }
+    } catch {}
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'analytics') {
@@ -288,6 +368,102 @@ export default function AdminPage() {
     alert('স্টোর সেটিংস সফলভাবে আপডেট করা হয়েছে!');
   };
 
+  // Customer Handlers
+  const handleGiftCoins = (customerId: string, amount: number) => {
+    const updated = customers.map((c) => {
+      if (c.id === customerId) {
+        return {
+          ...c,
+          rewardCoins: (c.rewardCoins || 0) + amount,
+        };
+      }
+      return c;
+    });
+    setCustomers(updated);
+    try {
+      localStorage.setItem('smartbazar_registered_customers', JSON.stringify(updated));
+    } catch {}
+    setSelectedCustomerForCoins(null);
+    alert(`সফলভাবে ${amount} কয়েন উপহার দেওয়া হয়েছে!`);
+  };
+
+  const handleDeleteCustomer = (customerId: string) => {
+    if (window.confirm('আপনি কি এই ক্রেতার অ্যাকাউন্ট মুছে ফেলতে চান?')) {
+      const updated = customers.filter((c) => c.id !== customerId);
+      setCustomers(updated);
+      try {
+        localStorage.setItem('smartbazar_registered_customers', JSON.stringify(updated));
+      } catch {}
+    }
+  };
+
+  // Review Handlers
+  const handleToggleReviewStatus = (reviewId: string) => {
+    const updated = reviews.map((r) =>
+      r.id === reviewId ? { ...r, isApproved: !r.isApproved } : r
+    );
+    setReviews(updated);
+    try {
+      localStorage.setItem('smartbazar_reviews', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+    if (window.confirm('আপনি কি এই রিভিউটি মুছে ফেলতে চান?')) {
+      const updated = reviews.filter((r) => r.id !== reviewId);
+      setReviews(updated);
+      try {
+        localStorage.setItem('smartbazar_reviews', JSON.stringify(updated));
+      } catch {}
+    }
+  };
+
+  // Coupon Handlers
+  const handleAddCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCouponCode.trim()) return;
+
+    const newC: Coupon = {
+      id: `coup-${Date.now()}`,
+      code: newCouponCode.trim().toUpperCase(),
+      discountType: newCouponType,
+      discountValue: newCouponValue,
+      minOrderAmount: newCouponMinSpend,
+      isActive: true,
+      description: `${newCouponType === 'percentage' ? `${newCouponValue}%` : `৳${newCouponValue}`} ছাড় (মিনিমাম ৳${newCouponMinSpend})`,
+    };
+
+    const updated = [newC, ...coupons.filter((c) => c.code !== newC.code)];
+    setCoupons(updated);
+    try {
+      localStorage.setItem('smartbazar_coupons', JSON.stringify(updated));
+    } catch {}
+
+    setNewCouponCode('');
+    setIsAddingCoupon(false);
+    alert(`কুপন ${newC.code} সফলভাবে তৈরি করা হয়েছে!`);
+  };
+
+  const handleToggleCoupon = (code: string) => {
+    const updated = coupons.map((c) =>
+      c.code === code ? { ...c, isActive: !c.isActive } : c
+    );
+    setCoupons(updated);
+    try {
+      localStorage.setItem('smartbazar_coupons', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handleDeleteCoupon = (code: string) => {
+    if (window.confirm('আপনি কি এই কুপনটি ডিলিট করতে চান?')) {
+      const updated = coupons.filter((c) => c.code !== code);
+      setCoupons(updated);
+      try {
+        localStorage.setItem('smartbazar_coupons', JSON.stringify(updated));
+      } catch {}
+    }
+  };
+
   const handleLogout = () => {
     logoutAdmin();
     router.replace('/admin/login');
@@ -456,6 +632,84 @@ export default function AdminPage() {
               </div>
             </button>
 
+            {/* Customers Hub */}
+            <button
+              onClick={() => {
+                setActiveTab('customers');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'customers'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Users className="w-4 h-4 text-cyan-400" />
+                <span>ক্রেতা ও কয়েন হাব</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-semibold">{customers.length}</span>
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'customers' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Reviews Hub */}
+            <button
+              onClick={() => {
+                setActiveTab('reviews');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'reviews'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-400" />
+                <span>রিভিউ মডারেশন</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-semibold">{reviews.length}</span>
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'reviews' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Coupons Hub */}
+            <button
+              onClick={() => {
+                setActiveTab('coupons');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'coupons'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Ticket className="w-4 h-4 text-pink-400" />
+                <span>কুপন ও প্রমোশন</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-semibold">{coupons.length}</span>
+                <ChevronRight
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    activeTab === 'coupons' ? 'rotate-90' : 'text-gray-500'
+                  }`}
+                />
+              </div>
+            </button>
+
             <button
               onClick={() => {
                 setActiveTab('fraud');
@@ -573,6 +827,9 @@ export default function AdminPage() {
               {activeTab === 'overview' && 'ড্যাশবোর্ড ও রিপোর্ট'}
               {activeTab === 'orders' && 'অর্ডার ও কুরিয়ার পাইপলাইন'}
               {activeTab === 'products' && 'পণ্য ও স্টক ইনভেন্টরি'}
+              {activeTab === 'customers' && 'রেজিস্টার্ড ক্রেতা ও কয়েন হাব'}
+              {activeTab === 'reviews' && 'কাস্টমার রিভিউ মডারেশন'}
+              {activeTab === 'coupons' && 'কুপন ও প্রমোশন হাব'}
               {activeTab === 'fraud' && 'ফ্রড প্রিভেনশন ও ব্ল্যাকলিস্ট হাব'}
               {activeTab === 'analytics' && 'পিক্সেল ও কনভার্সন ট্র্যাকিং হাব'}
               {activeTab === 'settings' && 'স্টোর ও হোয়াটসঅ্যাপ কনফিগারেশন'}
@@ -862,6 +1119,26 @@ export default function AdminPage() {
                             <div className="text-[11px] text-gray-500 max-w-[200px] truncate" title={ord.deliveryAddress}>
                               {ord.deliveryAddress}
                             </div>
+                            {ord.paymentMethod === 'bkash' && (
+                              <div className="mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">
+                                🌸 বিকাশ {ord.paymentTrxId ? `(TrxID: ${ord.paymentTrxId})` : ''}
+                              </div>
+                            )}
+                            {ord.paymentMethod === 'nagad' && (
+                              <div className="mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
+                                🔶 নগদ {ord.paymentTrxId ? `(TrxID: ${ord.paymentTrxId})` : ''}
+                              </div>
+                            )}
+                            {(!ord.paymentMethod || ord.paymentMethod === 'cod') && (
+                              <div className="mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
+                                💵 ক্যাশ অন ডেলিভারি
+                              </div>
+                            )}
+                            {ord.deliveryTimeSlot && (
+                              <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
+                                ⏰ {ord.deliveryTimeSlot}
+                              </div>
+                            )}
                             {isCustomerRisky(ord.customerPhone) && (
                               <div className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-1 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                 <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
@@ -1065,6 +1342,423 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ================= TAB: REGISTERED CUSTOMERS & REWARDS ================= */}
+        {activeTab === 'customers' && (
+          <div className="space-y-6">
+            {/* Top Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">মোট নিবন্ধিত ক্রেতা</p>
+                  <p className="text-2xl font-black text-gray-900 mt-1">{customers.length}</p>
+                </div>
+                <div className="p-3 bg-cyan-50 text-cyan-600 rounded-xl">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">মোট বিতরণকৃত রিওয়ার্ড কয়েন</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    🪙 {customers.reduce((sum, c) => sum + (c.rewardCoins || 0), 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                  <Coins className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500">গড় রিওয়ার্ড কয়েন / ক্রেতা</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {customers.length > 0
+                      ? Math.round(customers.reduce((sum, c) => sum + (c.rewardCoins || 0), 0) / customers.length)
+                      : 0}{' '}
+                    কয়েন
+                  </p>
+                </div>
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <Award className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-3">
+              <Search className="w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="ক্রেতার নাম বা মোবাইল নম্বর দিয়ে খুঁজুন..."
+                className="w-full text-xs bg-transparent focus:outline-none"
+              />
+            </div>
+
+            {/* Customers Table */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-600 uppercase font-semibold">
+                    <tr>
+                      <th className="p-3.5">ক্রেতার নাম ও আইডি</th>
+                      <th className="p-3.5">যোগাযোগ</th>
+                      <th className="p-3.5">সংরক্ষিত ডেলিভারি ঠিকানা</th>
+                      <th className="p-3.5">মোট অর্ডার</th>
+                      <th className="p-3.5">রিওয়ার্ড কয়েন</th>
+                      <th className="p-3.5 text-right">অ্যাকশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {customers
+                      .filter(
+                        (c) =>
+                          c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                          c.phone.includes(customerSearch)
+                      )
+                      .map((cust) => {
+                        const custCleanPhone = cust.phone.replace(/\D/g, '');
+                        const custOrders = orders.filter(
+                          (o) => o.customerPhone.replace(/\D/g, '') === custCleanPhone
+                        );
+                        return (
+                          <tr key={cust.id} className="hover:bg-gray-50/50">
+                            <td className="p-3.5">
+                              <span className="font-bold text-gray-900 block">{cust.name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">আইডি: {cust.id}</span>
+                            </td>
+                            <td className="p-3.5">
+                              <div className="text-emerald-700 font-semibold">{cust.phone}</div>
+                              {cust.email && <div className="text-[10px] text-gray-400">{cust.email}</div>}
+                            </td>
+                            <td className="p-3.5">
+                              <div className="text-gray-700 max-w-[200px] truncate" title={cust.defaultAddress}>
+                                {cust.defaultAddress || 'ঠিকানা সেভ করা নেই'}
+                              </div>
+                              <span className="text-[10px] text-gray-400">
+                                {cust.deliveryZone === 'inside_dhaka' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে'}
+                              </span>
+                            </td>
+                            <td className="p-3.5">
+                              <span className="font-bold text-gray-900">{custOrders.length} টি</span>
+                            </td>
+                            <td className="p-3.5">
+                              <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                🪙 {cust.rewardCoins || 0} কয়েন
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-right space-x-1.5">
+                              <a
+                                href={`https://wa.me/88${custCleanPhone.startsWith('88') ? custCleanPhone.slice(2) : custCleanPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg font-bold border border-emerald-200 transition-colors"
+                                title="হোয়াটসঅ্যাপ চ্যাট শুরু করুন"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>চ্যাট</span>
+                              </a>
+                              <button
+                                onClick={() => setSelectedCustomerForCoins(cust)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg font-bold border border-amber-200 transition-colors"
+                                title="বোনাস রিওয়ার্ড কয়েন উপহার দিন"
+                              >
+                                <Coins className="w-3.5 h-3.5" />
+                                <span>কয়েন দিন</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCustomer(cust.id)}
+                                className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                                title="ক্রেতার তথ্য ডিলিট করুন"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Gift Coins Modal */}
+            {selectedCustomerForCoins && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-gray-100 text-xs">
+                  <div className="flex justify-between items-center mb-4 pb-2 border-b">
+                    <h3 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                      <Coins className="w-4 h-4 text-amber-600" />
+                      <span>বোনাস কয়েন উপহার দিন</span>
+                    </h3>
+                    <button onClick={() => setSelectedCustomerForCoins(null)} className="text-gray-400 hover:text-gray-700">✕</button>
+                  </div>
+                  <p className="text-gray-600 mb-3">
+                    ক্রেতা: <strong>{selectedCustomerForCoins.name}</strong> ({selectedCustomerForCoins.phone})
+                  </p>
+                  <div className="mb-4">
+                    <label className="block font-bold text-gray-700 mb-1">কয়েনের পরিমাণ (1 Coin = ৳1)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000}
+                      value={bonusCoinsAmount}
+                      onChange={(e) => setBonusCoinsAmount(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-xl font-bold text-sm text-amber-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {[20, 50, 100, 200].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setBonusCoinsAmount(amt)}
+                        className="flex-1 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold rounded-lg text-[11px]"
+                      >
+                        +{amt}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => handleGiftCoins(selectedCustomerForCoins.id, bonusCoinsAmount)}
+                    className="w-full mt-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <span>উপহার পাঠান</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================= TAB: REVIEWS MODERATION ================= */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
+              <div>
+                <h3 className="font-bold text-sm text-gray-900">কাস্টমার রিভিউ ও রেটিং মডারেশন</h3>
+                <p className="text-xs text-gray-500">ক্রেতাদের দেওয়া রিভিউ অনুমোদন (Approve) বা বাতিল করুন।</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
+                  অনুমোদিত: {reviews.filter((r) => r.isApproved).length}
+                </span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold">
+                  মোট: {reviews.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Reviews Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reviews.map((rev) => {
+                const prod = products.find((p) => p.id === rev.productId);
+                return (
+                  <div key={rev.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="font-bold text-gray-900 text-xs block">{rev.customerName}</span>
+                        <span className="text-[10px] text-gray-400">
+                          পণ্য: <strong>{prod ? prod.name : rev.productId}</strong> • {rev.createdAt}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-amber-400">
+                        {Array.from({ length: rev.rating }).map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100 leading-relaxed">
+                      "{rev.comment}"
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          rev.isApproved
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {rev.isApproved ? 'অনুমোদিত' : 'অপেক্ষমাণ'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleReviewStatus(rev.id)}
+                          className={`px-2.5 py-1 rounded-lg font-semibold text-xs transition-colors ${
+                            rev.isApproved
+                              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          }`}
+                        >
+                          {rev.isApproved ? 'অনুমোদন প্রত্যাহার' : 'অনুমোদন দিন'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReview(rev.id)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="রিভিউ ডিলিট করুন"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB: COUPONS & PROMOTIONS ================= */}
+        {activeTab === 'coupons' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
+              <div>
+                <h3 className="font-bold text-sm text-gray-900">কুপন কোড ও প্রমোশন ম্যানেজার</h3>
+                <p className="text-xs text-gray-500">নতুন ডিসকাউন্ট কুপন তৈরি করুন ও কার্যকারিতা নিয়ন্ত্রণ করুন।</p>
+              </div>
+              <button
+                onClick={() => setIsAddingCoupon(!isAddingCoupon)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>নতুন কুপন যোগ করুন</span>
+              </button>
+            </div>
+
+            {/* Add Coupon Inline Form */}
+            {isAddingCoupon && (
+              <form onSubmit={handleAddCoupon} className="bg-white p-6 rounded-2xl border border-emerald-200 shadow-md space-y-4 text-xs animate-in fade-in duration-200">
+                <h4 className="font-bold text-sm text-gray-900">নতুন ডিসকাউন্ট কুপন তৈরি</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">কুপন কোড *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="যেমন: EID50 বা SALE10"
+                      value={newCouponCode}
+                      onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 border rounded-xl font-mono uppercase font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">ডিসকাউন্ট ধরন</label>
+                    <select
+                      value={newCouponType}
+                      onChange={(e) => setNewCouponType(e.target.value as 'fixed' | 'percentage')}
+                      className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    >
+                      <option value="fixed">ফিক্সড টাকা (৳)</option>
+                      <option value="percentage">শতকরা (%)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">ডিসকাউন্টের মান</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={newCouponValue}
+                      onChange={(e) => setNewCouponValue(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">মিনিমাম অর্ডার (৳)</label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={newCouponMinSpend}
+                      onChange={(e) => setNewCouponMinSpend(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingCoupon(false)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs"
+                  >
+                    বাতিল
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md"
+                  >
+                    কুপন সংরক্ষণ করুন
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Coupons Table */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-600 uppercase font-semibold">
+                    <tr>
+                      <th className="p-3.5">কুপন কোড</th>
+                      <th className="p-3.5">ছাড়ের বিবরণ</th>
+                      <th className="p-3.5">মিনিমাম অর্ডার</th>
+                      <th className="p-3.5">স্ট্যাটাস</th>
+                      <th className="p-3.5 text-right">অ্যাকশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {coupons.map((c) => (
+                      <tr key={c.code} className="hover:bg-gray-50/50">
+                        <td className="p-3.5">
+                          <span className="font-mono font-black text-xs px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg">
+                            {c.code}
+                          </span>
+                        </td>
+                        <td className="p-3.5 font-bold text-gray-800">
+                          {c.discountType === 'percentage' ? `${c.discountValue}% ছাড়` : `৳${c.discountValue} ক্যাশ ছাড়`}
+                        </td>
+                        <td className="p-3.5 text-gray-600">৳{c.minOrderAmount}</td>
+                        <td className="p-3.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              c.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {c.isActive ? 'সক্রিয়' : 'বন্ধ'}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-right space-x-2">
+                          <button
+                            onClick={() => handleToggleCoupon(c.code)}
+                            className={`px-2.5 py-1 rounded-lg font-semibold text-xs transition-colors ${
+                              c.isActive
+                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            }`}
+                          >
+                            {c.isActive ? 'নিষ্ক্রিয় করুন' : 'সক্রিয় করুন'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCoupon(c.code)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="কুপন ডিলিট করুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ================= TAB 4: STORE & WHATSAPP SETTINGS ================= */}
         {activeTab === 'settings' && (
           <div className="max-w-3xl bg-white rounded-2xl border border-gray-100 shadow-xs p-6 sm:p-8">
@@ -1209,6 +1903,120 @@ export default function AdminPage() {
                   }
                   className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Payment Send Money Numbers (bKash & Nagad) */}
+              <div className="bg-pink-50/50 p-4 rounded-xl border border-pink-100 space-y-3">
+                <div className="flex items-center gap-2 text-pink-900 font-bold">
+                  <span>📱 বিকাশ ও নগদ পার্সোনাল নম্বর (Send Money)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">
+                      বিকাশ পার্সোনাল নম্বর
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.bkashPersonalNumber || ''}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          bkashPersonalNumber: e.target.value,
+                        })
+                      }
+                      placeholder="যেমন: 01700000000"
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">
+                      নগদ পার্সোনাল নম্বর
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.nagadPersonalNumber || ''}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          nagadPersonalNumber: e.target.value,
+                        })
+                      }
+                      placeholder="যেমন: 01700000000"
+                      className="w-full px-3 py-2 border rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Marketing & Conversion Toggles */}
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <h4 className="font-bold text-gray-900 text-xs">মার্কেটিং ও কনভার্সন উইজেট নিয়ন্ত্রণ</h4>
+
+                {/* Flash Sale Toggle */}
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-gray-800 text-xs">⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার</span>
+                    <p className="text-[10px] text-gray-500">হোমপেজে মধ্যরাত পর্যন্ত কাউন্টডাউন আরজেন্সি বার দেখাবে।</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer shrink-0 ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.enableFlashSaleTimer !== false}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          enableFlashSaleTimer: e.target.checked,
+                        })
+                      }
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-gray-800">চালু</span>
+                  </label>
+                </div>
+
+                {/* Social Proof Toggle */}
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-gray-800 text-xs">🔔 লাইভ সেলস পপআপ নোটিফিকেশন</span>
+                    <p className="text-[10px] text-gray-500">স্ক্রিনের নিচে 'এইমাত্র অমুক অর্ডার করেছেন' লাইভ সোশ্যাল প্রুফ পপআপ দেখাবে।</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer shrink-0 ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.enableSocialProofPopup !== false}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          enableSocialProofPopup: e.target.checked,
+                        })
+                      }
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-gray-800">চালু</span>
+                  </label>
+                </div>
+
+                {/* Spin Wheel Toggle */}
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-gray-800 text-xs">🎁 ভাগ্যের চাকা (Spin Wheel Modal)</span>
+                    <p className="text-[10px] text-gray-500">কাস্টমারদের ডিসকাউন্ট কুপন জেতার ইন্টারঅ্যাক্টিভ স্পিন হুইল বাটন দেখাবে।</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer shrink-0 ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.enableSpinWheelOffers !== false}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          enableSpinWheelOffers: e.target.checked,
+                        })
+                      }
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-gray-800">চালু</span>
+                  </label>
+                </div>
               </div>
 
               {/* Order Celebration Toggle */}

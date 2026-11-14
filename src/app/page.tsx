@@ -112,7 +112,7 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full pb-24 md:pb-12">
         {/* Flash Sale Urgency Banner */}
-        <FlashSaleCountdown />
+        {storeSettings.enableFlashSaleTimer !== false && <FlashSaleCountdown />}
 
         {/* Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none">
@@ -292,23 +292,29 @@ export default function HomePage() {
       />
 
       {/* Live Sales Social Proof Popup */}
-      <SocialProofPopup onOpenProduct={(p) => setActiveModalProduct(p)} />
+      {storeSettings.enableSocialProofPopup !== false && (
+        <SocialProofPopup onOpenProduct={(p) => setActiveModalProduct(p)} />
+      )}
 
       {/* Floating Spin Wheel Trigger */}
-      <button
-        onClick={() => setIsSpinModalOpen(true)}
-        className="fixed bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-emerald-600 text-white font-extrabold text-xs shadow-xl hover:scale-105 active:scale-95 transition-transform group cursor-pointer"
-        title="ভাগ্যের চাকা ঘুরিয়ে ডিসকাউন্ট কুপন জিতুন"
-      >
-        <span className="text-base group-hover:rotate-45 transition-transform">🎁</span>
-        <span>ভাগ্যের চাকা</span>
-      </button>
+      {storeSettings.enableSpinWheelOffers !== false && (
+        <button
+          onClick={() => setIsSpinModalOpen(true)}
+          className="fixed bottom-6 left-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-emerald-600 text-white font-extrabold text-xs shadow-xl hover:scale-105 active:scale-95 transition-transform group cursor-pointer"
+          title="ভাগ্যের চাকা ঘুরিয়ে ডিসকাউন্ট কুপন জিতুন"
+        >
+          <span className="text-base group-hover:rotate-45 transition-transform">🎁</span>
+          <span>ভাগ্যের চাকা</span>
+        </button>
+      )}
 
       {/* Spin Wheel Modal */}
-      <SpinWheelModal
-        isOpen={isSpinModalOpen}
-        onClose={() => setIsSpinModalOpen(false)}
-      />
+      {storeSettings.enableSpinWheelOffers !== false && (
+        <SpinWheelModal
+          isOpen={isSpinModalOpen}
+          onClose={() => setIsSpinModalOpen(false)}
+        />
+      )}
 
       {/* 1-Click Quick Order Modal */}
       <WhatsAppCheckoutModal

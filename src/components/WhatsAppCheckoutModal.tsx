@@ -532,8 +532,12 @@ export function WhatsAppCheckoutModal({
                       <button
                         type="button"
                         onClick={() => {
+                          const activeNum =
+                            paymentMethod === 'bkash'
+                              ? storeSettings.bkashPersonalNumber || storeSettings.primaryWhatsAppNumber
+                              : storeSettings.nagadPersonalNumber || storeSettings.primaryWhatsAppNumber;
                           if (typeof navigator !== 'undefined') {
-                            navigator.clipboard.writeText(storeSettings.primaryWhatsAppNumber);
+                            navigator.clipboard.writeText(activeNum);
                             setCopiedNumber(true);
                             setTimeout(() => setCopiedNumber(false), 2000);
                           }
@@ -541,7 +545,11 @@ export function WhatsAppCheckoutModal({
                         className="flex items-center gap-1 font-mono font-bold bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition-colors shadow-2xs"
                       >
                         {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{storeSettings.primaryWhatsAppNumber}</span>
+                        <span>
+                          {paymentMethod === 'bkash'
+                            ? storeSettings.bkashPersonalNumber || storeSettings.primaryWhatsAppNumber
+                            : storeSettings.nagadPersonalNumber || storeSettings.primaryWhatsAppNumber}
+                        </span>
                         <span className="text-[10px] text-gray-500">{copiedNumber ? 'কপি হয়েছে' : 'কপি'}</span>
                       </button>
                     </div>

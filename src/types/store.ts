@@ -19,4 +19,9 @@ export interface StoreSettings {
   googleAnalyticsId?: string;
   enableOrderCelebration?: boolean;
   enableMetaPixelTracking?: boolean;
+  bkashPersonalNumber?: string;
+  nagadPersonalNumber?: string;
+  enableFlashSaleTimer?: boolean;
+  enableSocialProofPopup?: boolean;
+  enableSpinWheelOffers?: boolean;
 }

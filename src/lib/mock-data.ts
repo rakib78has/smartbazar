@@ -22,6 +22,11 @@ export const initialStoreSettings: StoreSettings = {
   googleAnalyticsId: 'G-SB12345678',
   enableOrderCelebration: true,
   enableMetaPixelTracking: true,
+  bkashPersonalNumber: '01700000000',
+  nagadPersonalNumber: '01700000000',
+  enableFlashSaleTimer: true,
+  enableSocialProofPopup: true,
+  enableSpinWheelOffers: true,
 };
 
 export const initialCategories: Category[] = [
