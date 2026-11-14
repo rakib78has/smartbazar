@@ -31,6 +31,26 @@ export default function HomePage() {
         setProducts(data);
       }
     });
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get('category');
+      if (cat) setSelectedCategory(cat);
+      if (params.get('spin') === 'true') setIsSpinModalOpen(true);
+
+      const handleCat = (e: any) => {
+        if (e.detail) setSelectedCategory(e.detail);
+      };
+      const handleSpin = () => setIsSpinModalOpen(true);
+
+      window.addEventListener('select-category', handleCat);
+      window.addEventListener('open-spin-wheel', handleSpin);
+
+      return () => {
+        window.removeEventListener('select-category', handleCat);
+        window.removeEventListener('open-spin-wheel', handleSpin);
+      };
+    }
   }, []);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -64,7 +84,11 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 dark:text-gray-100 flex flex-col font-sans transition-colors">
-      <Navbar onSearch={(q) => setSearchQuery(q)} />
+      <Navbar
+        onSearch={(q) => setSearchQuery(q)}
+        onOpenSpinWheel={() => setIsSpinModalOpen(true)}
+        onSelectCategory={(slug) => setSelectedCategory(slug)}
+      />
       <CartDrawer />
 
       {/* Hero Banner Section */}

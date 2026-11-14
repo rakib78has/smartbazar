@@ -7,18 +7,21 @@ import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { UserSidepane } from '@/components/UserSidepane';
 
 interface NavbarProps {
   onSearch?: (query: string) => void;
+  onOpenSpinWheel?: () => void;
+  onSelectCategory?: (categorySlug: string) => void;
 }
 
-export function Navbar({ onSearch }: NavbarProps) {
+export function Navbar({ onSearch, onOpenSpinWheel, onSelectCategory }: NavbarProps) {
   const { customer, isCustomerLoggedIn } = useCustomerAuth();
   const { totalItems, wishlist, storeSettings, setIsCartOpen } = useCart();
   const { language, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,11 +85,13 @@ export function Navbar({ onSearch }: NavbarProps) {
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 -ml-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 sm:hidden"
-              aria-label="Toggle menu"
+              onClick={() => setIsSideMenuOpen(true)}
+              className="p-2 -ml-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors flex items-center gap-1.5 group"
+              aria-label="মেনু সাইডবার খুলুন"
+              title="মেনু ও কাস্টমার হাব"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-105 transition-transform" />
+              <span className="text-xs font-bold hidden xl:inline text-gray-700 dark:text-gray-200">মেনু</span>
             </button>
 
             <Link href="/" className="flex items-center gap-2 group">
@@ -264,53 +269,13 @@ export function Navbar({ onSearch }: NavbarProps) {
           </div>
         </div>
 
-        {/* Mobile Dropdown Drawer */}
-        {isMobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-100 dark:border-gray-800 py-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-            <Link
-              href="/"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <span>হোম পেজ</span>
-            </Link>
-            <Link
-              href="/track-order"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <Truck className="w-4 h-4 text-emerald-600" />
-              <span>{t('trackOrder')}</span>
-            </Link>
-            {isCustomerLoggedIn && customer ? (
-              <Link
-                href="/account"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50"
-              >
-                <User className="w-4 h-4 text-emerald-600" />
-                <span>আমার অ্যাকাউন্ট ({customer.name})</span>
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <User className="w-4 h-4 text-gray-500" />
-                <span>লগইন / রেজিস্টার</span>
-              </Link>
-            )}
-            <Link
-              href="/admin"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-gray-400" />
-              <span>অ্যাডমিন প্যানেল</span>
-            </Link>
-          </div>
-        )}
+        {/* User Navigation Sidepane (Left Drawer) */}
+        <UserSidepane
+          isOpen={isSideMenuOpen}
+          onClose={() => setIsSideMenuOpen(false)}
+          onOpenSpinWheel={onOpenSpinWheel}
+          onSelectCategory={onSelectCategory}
+        />
       </div>
     </header>
   );
